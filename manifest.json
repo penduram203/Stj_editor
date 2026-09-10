@@ -1,0 +1,9 @@
+{
+    "display_name": "STJ Character Exporter",
+    "js": "stj_editor.js",
+    "css": "stj_editor.css",
+    "author": "Your Name",
+    "version": "1.1.0",
+    "description": "キャラクター情報をJSON形式でエクスポートする拡張機能",
+    "auto_update": true
+}
