@@ -1,222 +1,330 @@
 /* 新規追加ボタンスタイル */
 #stj_export_button {
-    width: 120px;
-    height: 40px;
-    background-color: #4a5568;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 8px;
-    transition: background-color 0.2s;
-    font-weight: bold;
+  width: 120px;
+  height: 40px;
+  background-color: #4a5568;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  transition: background-color 0.2s;
+  font-weight: bold;
 }
-
 #stj_export_button:hover {
-    background-color: #2d3748;
+  background-color: #2d3748;
 }
 
-/* モーダルウィンドウスタイル */
+/* モーダルウィンドウスタイル - 幅を広げて400pxプレビューに対応 */
 #stj_export_modal {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 80vw;
-    max-width: 900px;
-    max-height: 90vh;
-    background-color: #2d3748;
-    border: 1px solid #4a5568;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    z-index: 10001;
-    overflow-y: auto;
-    color: #ffffff;
-}
-
-/* キャラクター名表示スタイル */
-#stj_char_name_display {
-    font-size: 28px;
-    font-weight: bold;
-    color: #ffffff;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
-    margin-bottom: 20px;
-    text-align: center;
-    display: block;
-    width: 100%;
-}
-
-.stj-grid-container {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 10vw;
+  width: 80vw;
+  height: 100vh;
+  background-color: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  z-index: 10001;
+  overflow-y: auto;
 }
 
 .stj-input-group {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    margin-bottom: 10px;
+  margin-bottom: 15px;
 }
-
 .stj-input-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 14px;
-    color: #e2e8f0;
-    font-weight: 500;
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #e2e8f0;
+  font-weight: 500;
 }
-
-.stj-input-group input,
+.stj-input-group input, .stj-input-group select {
+  width: 100%;
+  padding: 8px;
+  background-color: #4a5568;
+  border: 1px solid #718096;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+}
 .stj-input-group select {
-    width: 100%;
-    padding: 8px;
-    background-color: #4a5568;
-    border: 1px solid #718096;
-    border-radius: 4px;
-    color: white;
-    font-size: 14px;
-    box-sizing: border-box;
+  cursor: pointer;
 }
 
-.stj-input-group select {
-    cursor: pointer;
+.stj-button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding: 15px 0;
 }
-
-.stj-image-input::placeholder,
-.stj-keyword-input::placeholder {
-    font-size: 13px;
-    color: #a0aec0;
+.stj-button-group button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+}
+#stj_export_json {
+  background-color: #48bb78;
+  color: white;
+  margin-left: 10px;
+}
+#stj_cancel_export {
+  background-color: #e53e3e;
+  color: white;
+}
+#stj_add_keyword {
+  background-color: #4299e1;
+  color: white;
 }
 
 /* キーワード行のスタイル */
 .stj-keyword-item {
-    display: flex;
-    margin-bottom: 15px;
-    padding: 15px;
-    background-color: #1a202c;
-    border-radius: 8px;
-    width: 100%;
-    gap: 15px;
-    align-items: center;
-    box-sizing: border-box;
+  display: flex;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #1a202c;
+  border-radius: 8px;
+  width: 100%;
+  gap: 25px;
+  align-items: center;
+  min-height: 440px;
 }
-
+.stj-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.stj-keyword-width {
+  flex: 1;
+}
+.stj-image-width {
+  flex: 1;
+}
+.stj-extension-width {
+  flex: 1;
+}
 .stj-delete-row {
-    width: 35px;
-    height: 35px;
-    padding: 0;
-    background-color: #e53e3e;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    font-size: 16px;
-    transition: background-color 0.2s;
+  width: 35px;
+  height: 35px;
+  padding: 0;
+  background-color: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+  align-self: flex-start;
+  margin-top: 0;
 }
 
-.stj-delete-row:hover {
-    background-color: #c53030;
+/* セーブボタンのスタイル追加 */
+#stj_save_data {
+  background-color: #4299e1;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 10px;
+  font-size: 14px;
 }
-
-/* ボタン群のスタイル */
-.stj-button-group {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-    padding: 15px 0 0 0;
-    border-top: 1px solid #4a5568;
+#stj_save_data:hover {
+  background-color: #3182ce;
 }
 
 .stj-button-group > div {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
 }
 
-.stj-button-group button,
-#stj_add_keyword {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
-    transition: opacity 0.2s;
+#stj_char_name_display {
+  font-size: 28px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  margin-bottom: 20px;
+  text-align: center;
+  display: block;
+  width: 100%;
 }
 
-.stj-button-group button:hover,
-#stj_add_keyword:hover {
-    opacity: 0.9;
-}
-
-#stj_add_keyword {
-    background-color: #4299e1;
-    color: white;
-    align-self: flex-start;
-}
-
-#stj_save_data {
-    background-color: #3182ce;
-    color: white;
-}
-
-#stj_export_json {
-    background-color: #48bb78;
-    color: white;
-}
-
-#stj_cancel_export {
-    background-color: #e53e3e;
-    color: white;
-}
-
-/* 画像プレビュー領域 */
 .stj-image-preview {
-    width: 400px;
-    height: 400px;
-    background-color: #1a202c;
-    border: 2px dashed #4a5568;
-    border-radius: 8px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    position: relative;
-    flex-shrink: 0;
+  width: 400px;
+  height: 400px;
+  background-color: #1a202c;
+  border: 2px dashed #4a5568;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
 }
-
 .stj-image-preview img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.stj-preview-text {
+  color: #a0aec0;
+  font-size: 16px;
+  text-align: center;
+  padding: 20px;
+  width: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.stj-preview-error {
+  color: #e53e3e !important;
+  font-weight: bold;
 }
 
-/* レスポンシブ調整 */
+.stj-inputs-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  justify-content: center;
+  height: 100%;
+}
+.stj-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.stj-special-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+.stj-special-item {
+  display: flex;
+  padding: 20px;
+  background-color: #1a202c;
+  border-radius: 8px;
+  gap: 25px;
+  align-items: center;
+  min-height: 440px;
+}
+.stj-special-preview {
+  flex-shrink: 0;
+}
+.stj-special-inputs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  justify-content: center;
+  height: 100%;
+}
+
+#stj_custom_alert {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  transform-origin: center;
+  padding: 30px 60px;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-size: 32px;
+  font-weight: bold;
+  border-radius: 12px;
+  z-index: 10002;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: all 0.3s ease-out;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+  border: 3px solid #48bb78;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.05); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+#stj_custom_alert {
+  animation: pulse 0.5s ease-in-out 0.3s;
+}
+
+.stj-keyword-input, .stj-image-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+  padding: 10px;
+}
+
+.stj-image-preview button {
+  font-size: 24px;
+  font-weight: bold;
+  width: 50px;
+  height: 50px;
+  z-index: 10;
+}
+
+@media (max-width: 1400px) {
+  #stj_export_modal { left: 5vw; width: 90vw; }
+}
+@media (max-width: 1200px) {
+  .stj-keyword-item, .stj-special-item {
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    min-height: auto;
+  }
+  .stj-image-preview {
+    width: 100%;
+    max-width: 400px;
+    height: 400px;
+    margin: 0 auto;
+  }
+  .stj-inputs-container, .stj-special-inputs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  #stj_export_modal { left: 2vw; width: 96vw; }
+}
 @media (max-width: 768px) {
-    #stj_export_modal {
-        width: 95vw;
-        padding: 10px;
-    }
-
-    .stj-button-group {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .stj-button-group > div {
-        justify-content: center;
-        width: 100%;
-    }
+  .stj-keyword-item, .stj-special-item {
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+  }
+  .stj-image-preview {
+    width: 100%;
+    height: 300px;
+    max-width: none;
+  }
+  .stj-inputs-container, .stj-special-inputs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  #stj_export_modal { left: 0; width: 100vw; padding: 10px; }
+  .stj-button-group { flex-direction: column; gap: 10px; }
+  .stj-button-group > div { justify-content: center; }
 }
