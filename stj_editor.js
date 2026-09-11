@@ -10,7 +10,7 @@
 // 5) addKeywordRowWithData（保存データ/既存JSON読込時に行を生成する関数）に
 //    削除ボタン・プレビュー更新のイベントリスナーが付いていなかったバグを修正
 (function() {
-    const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp'];
+    const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp', 'mp4'];
     const MODULE_NAME = 'stj_editor';
 
     // SillyTavern context を取得するヘルパー（未取得ならnull）
