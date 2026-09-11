@@ -1,10 +1,14 @@
 // 修正版:
-// 旧コードは `import { getContext } from '../../../script.js';` としていたが、
-// third-party 拡張機能から script.js までのパスは本来 4階層上る必要があり（3階層では不足）、
-// ブラウザが /script.js ではなく /scripts/script.js を要求してしまい 404 → HTMLが返り
-// 「MIMEタイプが許可されていない」エラーで拡張機能全体が読み込めなくなっていた。
-// これらの静的importはすべて廃止し、実行時に window.SillyTavern.getContext() を
-// 呼び出す方式（公式ドキュメント推奨）に統一する。
+// 1) SillyTavern.getContext() 経由でのextensionSettings利用（前回修正分、維持）
+// 2) exportJSON() が空スタブで実際にファイルをダウンロードしていなかったバグを修正
+//    → フォームの内容から image_display_extension 形式のJSONを組み立て、
+//      "{キャラ名}_ext.json" としてブラウザダウンロードするよう実装
+// 3) updatePreview / updateSinglePreview / setupPreviewListeners が空スタブだったため
+//    プレビュー画像が一切表示されなかったバグを修正
+// 4) loadExistingJSONData が取得したJSONを捨てるだけだったため、既存データの
+//    再編集ができなかったバグを修正（フォームへ反映するよう実装）
+// 5) addKeywordRowWithData（保存データ/既存JSON読込時に行を生成する関数）に
+//    削除ボタン・プレビュー更新のイベントリスナーが付いていなかったバグを修正
 (function() {
     const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp'];
     const MODULE_NAME = 'stj_editor';
@@ -59,7 +63,7 @@
         });
     }
 
-    // 画像の拡張子を自動検出する関数
+    // 画像の拡張子を自動検出する関数（addchara/{charName}/{imageName}.{ext} の存在確認）
     async function detectImageExtension(charName, imageName) {
         if (!charName || !imageName) return null;
         for (const ext of ALLOWED_EXTENSIONS) {
@@ -72,7 +76,7 @@
         return null;
     }
 
-    // 拡張子を含むパスからファイル名を抽出
+    // 拡張子を含むパスからファイル名（拡張子なし）を抽出
     function extractFileNameFromPath(path) {
         if (!path) return '';
         const parts = path.split('/');
@@ -85,6 +89,24 @@
     function parseImageNames(input) {
         if (!input) return [];
         return input.split(',').map(name => name.trim()).filter(name => name.length > 0);
+    }
+
+    // JSON内を再帰探索して image_display_extension を見つける（image-display.js と同じロジック）
+    function findImageMapInData(data) {
+        if (data === null || typeof data !== 'object') return null;
+        if (data.hasOwnProperty('image_display_extension')) {
+            const potentialMap = data.image_display_extension;
+            if (typeof potentialMap === 'object' && potentialMap !== null) {
+                return potentialMap;
+            }
+        }
+        for (const key in data) {
+            if (data.hasOwnProperty(key)) {
+                const result = findImageMapInData(data[key]);
+                if (result !== null) return result;
+            }
+        }
+        return null;
     }
 
     // 新規ボタン作成関数
@@ -115,6 +137,24 @@
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    }
+
+    // キーワード行に「削除」「プレビュー自動更新」のイベントを付与する共通処理
+    // （addKeywordRow・addKeywordRowWithData の両方から呼ぶことで付け忘れを防ぐ）
+    function attachKeywordRowListeners(item, index) {
+        const deleteButton = item.querySelector('.stj-delete-row');
+        if (deleteButton) {
+            deleteButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                item.remove();
+            });
+        }
+        const imageInput = item.querySelector('.stj-image-input');
+        if (imageInput) {
+            imageInput.addEventListener('input', debounce(function() {
+                updateSinglePreview(index);
+            }, 500));
+        }
     }
 
     // モーダルウィンドウ作成関数
@@ -230,14 +270,12 @@
             }
         });
 
-        const firstDeleteButton = modal.querySelector('.stj-delete-row');
-        if (firstDeleteButton) {
-            firstDeleteButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const item = this.closest('.stj-keyword-item');
-                if (item) { item.remove(); }
-            });
+        // 最初から存在する1行目にも「削除」「プレビュー更新」を付与
+        const firstItem = modal.querySelector('.stj-keyword-item');
+        if (firstItem) {
+            attachKeywordRowListeners(firstItem, 0);
         }
+
         const imageInputs = ['stj_default_image', 'stj_thumbnail_image'];
         imageInputs.forEach(id => {
             const input = document.getElementById(id);
@@ -274,21 +312,14 @@
         `;
         container.appendChild(newItem);
 
-        const deleteButton = newItem.querySelector('.stj-delete-row');
-        deleteButton.addEventListener('click', function(e) {
-            e.stopPropagation();
-            newItem.remove();
-        });
-        const imageInput = newItem.querySelector('.stj-image-input');
-        if (imageInput) {
-            imageInput.addEventListener('input', debounce(function() {
-                updateSinglePreview(itemCount);
-            }, 500));
-        }
+        attachKeywordRowListeners(newItem, itemCount);
+
         modal.scrollTop = modal.scrollHeight;
         setTimeout(() => updateSinglePreview(itemCount), 100);
     }
 
+    // charName を起点に addchara/{charName}/{charName}_ext.json を取得し、
+    // 見つかった image_display_extension をフォームへ反映する
     async function loadExistingJSONData(charName) {
         if (!charName) return;
         try {
@@ -296,8 +327,10 @@
             const response = await fetch(jsonPath);
             if (response.ok) {
                 const data = await response.json();
-                if (data) {
-                    // JSONデータ読み込み処理（必要に応じて展開）
+                const imageMap = findImageMapInData(data);
+                if (imageMap) {
+                    console.log(`✅ ${charName}_ext.json から既存データを読み込みました`);
+                    populateFormFromImageMap(imageMap);
                 }
             }
         } catch (e) {
@@ -305,22 +338,137 @@
         }
     }
 
+    // image_display_extension オブジェクトからフォーム（デフォルト/サムネイル/キーワード行）を構築
+    function populateFormFromImageMap(imageMap) {
+        const toInputValue = (val) => {
+            const arr = Array.isArray(val) ? val : [val];
+            return arr.map(p => extractFileNameFromPath(p)).join(',');
+        };
+
+        if (imageMap.default !== undefined) {
+            document.getElementById('stj_default_image').value = toInputValue(imageMap.default);
+        }
+        if (imageMap.thumbnail !== undefined) {
+            document.getElementById('stj_thumbnail_image').value = toInputValue(imageMap.thumbnail);
+        }
+
+        const container = document.getElementById('stj_keywords_container');
+        container.innerHTML = '';
+        let index = 0;
+        Object.entries(imageMap).forEach(([key, val]) => {
+            if (key === 'default' || key === 'thumbnail') return;
+            addKeywordRowWithData(container, index, { keyword: key, imageName: toInputValue(val) });
+            index++;
+        });
+        if (index === 0) {
+            // キーワード行が1つも無い場合は空行を1つ用意しておく
+            addKeywordRowWithData(container, 0, { keyword: '', imageName: '' });
+        }
+    }
+
     function setupPreviewListeners() {
-        // プレビューのイベント登録処理
+        // モーダルを開いた／データを読み込んだ直後に、現在のフォーム内容でプレビューを更新する
+        updatePreview();
     }
 
-    function updatePreview() {
-        // 全プレビュー更新処理
+    // デフォルト/サムネイル/全キーワード行のプレビューをまとめて更新
+    async function updatePreview() {
+        const charName = document.getElementById('stj_char_name_display').textContent;
+        await updateImagePreview('stj_preview_default', charName, document.getElementById('stj_default_image')?.value);
+        await updateImagePreview('stj_preview_thumbnail', charName, document.getElementById('stj_thumbnail_image')?.value);
+        const keywordItems = document.querySelectorAll('.stj-keyword-item');
+        for (let i = 0; i < keywordItems.length; i++) {
+            await updateSinglePreview(i);
+        }
     }
 
-    function updateSinglePreview(index) {
-        // 単一プレビュー更新処理
+    // 指定したキーワード行だけプレビューを更新
+    async function updateSinglePreview(index) {
+        const charName = document.getElementById('stj_char_name_display').textContent;
+        const imageInput = document.getElementById(`stj_image_name_${index}`);
+        if (!imageInput) return;
+        await updateImagePreview(`stj_preview_${index}`, charName, imageInput.value);
     }
 
+    // 指定プレビューボックスへ画像を表示する共通処理（複数指定時は先頭の1枚を表示）
+    async function updateImagePreview(previewId, charName, rawValue) {
+        const previewEl = document.getElementById(previewId);
+        if (!previewEl) return;
+
+        const imageNames = parseImageNames(rawValue);
+        if (!charName || imageNames.length === 0) {
+            previewEl.innerHTML = '<div class="stj-preview-text">画像プレビュー</div>';
+            return;
+        }
+
+        const firstName = extractFileNameFromPath(imageNames[0]);
+        const ext = await detectImageExtension(charName, firstName);
+        if (ext) {
+            previewEl.innerHTML = `<img src="addchara/${charName}/${firstName}.${ext}" alt="${firstName}">`;
+        } else {
+            previewEl.innerHTML = '<div class="stj-preview-text stj-preview-error">画像が見つかりません</div>';
+        }
+    }
+
+    // フォームの内容から image_display_extension 形式のオブジェクトを組み立てる
+    // （画像ファイル名 → addchara/{charName}/{ファイル名} のフルパスに変換）
+    function buildImageMapFromForm(charName) {
+        const toPaths = (raw) => parseImageNames(raw).map(name => `addchara/${charName}/${extractFileNameFromPath(name)}`);
+        const imageMap = {};
+
+        const defaultPaths = toPaths(document.getElementById('stj_default_image').value);
+        if (defaultPaths.length > 0) {
+            imageMap.default = defaultPaths.length === 1 ? defaultPaths[0] : defaultPaths;
+        }
+
+        const thumbnailPaths = toPaths(document.getElementById('stj_thumbnail_image').value);
+        if (thumbnailPaths.length > 0) {
+            imageMap.thumbnail = thumbnailPaths.length === 1 ? thumbnailPaths[0] : thumbnailPaths;
+        }
+
+        document.querySelectorAll('.stj-keyword-item').forEach(item => {
+            const keywordInput = item.querySelector('.stj-keyword-input');
+            const imageInput = item.querySelector('.stj-image-input');
+            if (!keywordInput || !imageInput) return;
+            const keyword = keywordInput.value.trim();
+            if (!keyword) return;
+            const paths = toPaths(imageInput.value);
+            if (paths.length === 0) return;
+            imageMap[keyword] = paths.length === 1 ? paths[0] : paths;
+        });
+
+        return imageMap;
+    }
+
+    // 「JSON出力」ボタン: フォーム内容から {charName}_ext.json をブラウザダウンロードする
     function exportJSON() {
-        // JSONダウンロード処理
-        const modal = document.getElementById('stj_export_modal');
-        if (modal) modal.style.display = 'none';
+        const charName = document.getElementById('stj_char_name_display').textContent;
+        if (!charName) {
+            alert('キャラクター名が設定されていません');
+            return;
+        }
+
+        const imageMap = buildImageMapFromForm(charName);
+        const exportData = {
+            image_display_extension: imageMap
+        };
+
+        try {
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${charName}_ext.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showCustomAlert('JSONファイルを出力しました');
+            console.log(`✅ ${charName}_ext.json を出力しました`, exportData);
+        } catch (e) {
+            console.error('[STJ Editor] JSON出力に失敗しました:', e);
+            alert('JSON出力に失敗しました。詳細はコンソールを確認してください。');
+        }
     }
 
     function showCustomAlert(message) {
@@ -347,7 +495,7 @@
         }, 3000);
     }
 
-    // データ保存関数（extensionSettings（サーバー保存））
+    // データ保存関数（ブラウザ内 extensionSettings（サーバー保存）へのセーブ。JSON出力とは別物）
     function saveData() {
         const charName = document.getElementById('stj_char_name_display').textContent;
         if (!charName) {
@@ -379,7 +527,7 @@
         showCustomAlert('データを保存しました');
     }
 
-    // 保存データ読み込み関数
+    // 保存データ読み込み関数（ブラウザ内 extensionSettings から）
     function loadSavedData(charName) {
         if (!charName) return;
         const stjSettings = getExtensionSettings();
@@ -425,6 +573,10 @@
             </div>
         `;
         container.appendChild(newItem);
+
+        // 元コードではここでイベントが一切付与されておらず、
+        // 読み込んだ行の削除ボタン・プレビュー自動更新が機能していなかった
+        attachKeywordRowListeners(newItem, index);
     }
 
     /**
