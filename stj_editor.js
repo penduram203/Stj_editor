@@ -1,5 +1,5 @@
-import { getContext } from '../../../script.js'; 
-import { extension_settings, saveSettingsDebounced } from '../../../extensions.js';
+import { getContext } from '../../../../script.js';
+import { extension_settings, saveSettingsDebounced } from '../../../../extensions.js';
 import { 
     ALLOWED_EXTENSIONS, 
     checkImageExists, 
