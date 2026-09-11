@@ -171,6 +171,9 @@
         }
     }
 
+    // 共通の反映ボタン用CSSスタイル（大きめ・黒太字）
+    const applyBtnStyle = 'margin-top: 6px; padding: 6px 14px; font-size: 13px; font-weight: bold; color: #000000; background-color: #e0e0e0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; display: inline-block; width: fit-content;';
+
     // モーダルウィンドウ作成関数
     function createExportModal(anchorButton) {
         const existingModal = document.getElementById('stj_export_modal');
@@ -196,9 +199,9 @@
                     <div class="stj-special-inputs">
                         <div class="stj-input-group">
                             <label for="stj_default_image">ファイル名</label>
-                            <div style="display: flex; gap: 5px;">
-                                <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
-                                <button type="button" class="stj-apply-special" data-target="default" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                            <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                            <div>
+                                <button type="button" class="stj-apply-special" data-target="default" style="${applyBtnStyle}">反映</button>
                             </div>
                         </div>
                     </div>
@@ -212,9 +215,9 @@
                     <div class="stj-special-inputs">
                         <div class="stj-input-group">
                             <label for="stj_thumbnail_image">ファイル名</label>
-                            <div style="display: flex; gap: 5px;">
-                                <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
-                                <button type="button" class="stj-apply-special" data-target="thumbnail" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                            <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                            <div>
+                                <button type="button" class="stj-apply-special" data-target="thumbnail" style="${applyBtnStyle}">反映</button>
                             </div>
                         </div>
                     </div>
@@ -236,9 +239,9 @@
                         <div class="stj-input-row">
                             <div class="stj-input-group stj-image-width">
                                 <label for="stj_image_name_0">ファイル名</label>
-                                <div style="display: flex; gap: 5px;">
-                                    <input type="text" id="stj_image_name_0" class="stj-image-input" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
-                                    <button type="button" class="stj-apply-row" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                                <input type="text" id="stj_image_name_0" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                                <div>
+                                    <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
                                 </div>
                             </div>
                         </div>
@@ -332,9 +335,9 @@
                 <div class="stj-input-row">
                     <div class="stj-input-group stj-image-width">
                         <label for="stj_image_name_${itemCount}">ファイル名</label>
-                        <div style="display: flex; gap: 5px;">
-                            <input type="text" id="stj_image_name_${itemCount}" class="stj-image-input" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
-                            <button type="button" class="stj-apply-row" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                        <input type="text" id="stj_image_name_${itemCount}" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                        <div>
+                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
                         </div>
                     </div>
                 </div>
@@ -668,9 +671,9 @@
                 <div class="stj-input-row">
                     <div class="stj-input-group stj-image-width">
                         <label for="stj_image_name_${index}">ファイル名</label>
-                        <div style="display: flex; gap: 5px;">
-                            <input type="text" id="stj_image_name_${index}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
-                            <button type="button" class="stj-apply-row" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                        <input type="text" id="stj_image_name_${index}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り">
+                        <div>
+                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
                         </div>
                     </div>
                 </div>
