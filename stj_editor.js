@@ -8,7 +8,7 @@
         return !!url.match(/\.(mp4|webm)$/i);
     }
 
-    // SillyTavern context を取得するヘルパー（未取得ならnull）
+    // SillyTavern context を取得するヘルパー
     function getSTContext() {
         if (window.SillyTavern && typeof window.SillyTavern.getContext === 'function') {
             return window.SillyTavern.getContext();
@@ -65,15 +65,14 @@
         });
     }
 
-    // メディアの拡張子を自動検出する関数（addchara/{charName}/{imageName}.{ext} の存在確認）
+    // メディアの拡張子を自動検出する関数
     async function detectImageExtension(charName, imageName) {
         if (!charName || !imageName) return null;
         
-        // 既に拡張子が含まれている場合
         if (imageName.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
             const path = `addchara/${charName}/${imageName}`;
             const exists = await checkMediaExists(path);
-            if (exists) return ''; // 拡張子補完不要
+            if (exists) return '';
         }
 
         for (const ext of ALLOWED_EXTENSIONS) {
@@ -86,7 +85,7 @@
         return null;
     }
 
-    // 拡張子を含むパスからファイル名（拡張子なし、またはそのまま）を抽出
+    // 拡張子を含むパスからファイル名（拡張子なし）を抽出
     function extractFileNameFromPath(path) {
         if (!path) return '';
         const parts = path.split('/');
@@ -185,7 +184,7 @@
             <div class="stj-special-container">
                 <div class="stj-special-item">
                     <div class="stj-special-preview">
-                        <div class="stj-image-preview" id="stj_preview_default">
+                        <div class="stj-image-preview" id="stj_preview_default" style="position: relative;">
                             <div class="stj-preview-text">デフォルトメディアプレビュー</div>
                         </div>
                     </div>
@@ -198,7 +197,7 @@
                 </div>
                 <div class="stj-special-item">
                     <div class="stj-special-preview">
-                        <div class="stj-image-preview" id="stj_preview_thumbnail">
+                        <div class="stj-image-preview" id="stj_preview_thumbnail" style="position: relative;">
                             <div class="stj-preview-text">サムネイルプレビュー</div>
                         </div>
                     </div>
@@ -212,7 +211,7 @@
             </div>
             <div id="stj_keywords_container" class="stj-grid-container">
                 <div class="stj-keyword-item">
-                    <div class="stj-image-preview" id="stj_preview_0">
+                    <div class="stj-image-preview" id="stj_preview_0" style="position: relative;">
                         <div class="stj-preview-text">プレビュー</div>
                     </div>
                     <div class="stj-inputs-container">
@@ -299,7 +298,7 @@
         const newItem = document.createElement('div');
         newItem.className = 'stj-keyword-item';
         newItem.innerHTML = `
-            <div class="stj-image-preview" id="stj_preview_${itemCount}">
+            <div class="stj-image-preview" id="stj_preview_${itemCount}" style="position: relative;">
                 <div class="stj-preview-text">プレビュー</div>
             </div>
             <div class="stj-inputs-container">
@@ -391,34 +390,105 @@
         await updateImagePreview(`stj_preview_${index}`, charName, imageInput.value);
     }
 
-    // 指定プレビューボックスへ画像または動画を表示する処理
-    async function updateImagePreview(previewId, charName, rawValue) {
+    // 指定プレビューボックスへ画像または動画を表示する処理（複数枚ナビゲーション機能対応）
+    async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
         const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
+
+        // 相対位置指定（ボタンオーバーレイ用）を適用
+        previewEl.style.position = 'relative';
 
         const imageNames = parseImageNames(rawValue);
         if (!charName || imageNames.length === 0) {
             previewEl.innerHTML = '<div class="stj-preview-text">プレビュー</div>';
+            delete previewEl.dataset.currentIndex;
             return;
         }
 
-        const firstName = extractFileNameFromPath(imageNames[0]);
+        // インデックス範囲のループ制御
+        let currentIndex = targetIndex;
+        if (currentIndex < 0) currentIndex = imageNames.length - 1;
+        if (currentIndex >= imageNames.length) currentIndex = 0;
+        previewEl.dataset.currentIndex = currentIndex;
+
+        const firstName = extractFileNameFromPath(imageNames[currentIndex]);
         const ext = await detectImageExtension(charName, firstName);
         
         if (ext !== null) {
             const fullPath = ext ? `addchara/${charName}/${firstName}.${ext}` : `addchara/${charName}/${firstName}`;
             
+            let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
-                previewEl.innerHTML = `
+                mediaHtml = `
                     <video src="${fullPath}" autoplay loop muted playsinline 
                            style="width: 100%; height: 100%; object-fit: contain; display: block; background-color: rgba(0,0,0,0.4);">
                     </video>`;
-                const vid = previewEl.querySelector('video');
-                if (vid) vid.play().catch(() => {});
             } else {
-                previewEl.innerHTML = `
+                mediaHtml = `
                     <img src="${fullPath}" alt="${firstName}" 
                          style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
+            }
+
+            previewEl.innerHTML = mediaHtml;
+
+            if (isVideoUrl(fullPath)) {
+                const vid = previewEl.querySelector('video');
+                if (vid) vid.play().catch(() => {});
+            }
+
+            // 複数指定がある場合はナビゲーションボタンとインデックスを表示
+            if (imageNames.length > 1) {
+                const leftButton = document.createElement('button');
+                leftButton.innerHTML = '←';
+                leftButton.style.position = 'absolute';
+                leftButton.style.left = '5px';
+                leftButton.style.top = '50%';
+                leftButton.style.transform = 'translateY(-50%)';
+                leftButton.style.zIndex = '10';
+                leftButton.style.background = 'rgba(0,0,0,0.5)';
+                leftButton.style.color = 'white';
+                leftButton.style.border = 'none';
+                leftButton.style.borderRadius = '3px';
+                leftButton.style.padding = '5px 10px';
+                leftButton.style.cursor = 'pointer';
+                leftButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    updateImagePreview(previewId, charName, rawValue, currentIndex - 1);
+                });
+                previewEl.appendChild(leftButton);
+
+                const rightButton = document.createElement('button');
+                rightButton.innerHTML = '→';
+                rightButton.style.position = 'absolute';
+                rightButton.style.right = '5px';
+                rightButton.style.top = '50%';
+                rightButton.style.transform = 'translateY(-50%)';
+                rightButton.style.zIndex = '10';
+                rightButton.style.background = 'rgba(0,0,0,0.5)';
+                rightButton.style.color = 'white';
+                rightButton.style.border = 'none';
+                rightButton.style.borderRadius = '3px';
+                rightButton.style.padding = '5px 10px';
+                rightButton.style.cursor = 'pointer';
+                rightButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    updateImagePreview(previewId, charName, rawValue, currentIndex + 1);
+                });
+                previewEl.appendChild(rightButton);
+
+                const indexDisplay = document.createElement('div');
+                indexDisplay.style.position = 'absolute';
+                indexDisplay.style.bottom = '5px';
+                indexDisplay.style.left = '50%';
+                indexDisplay.style.transform = 'translateX(-50%)';
+                indexDisplay.style.zIndex = '10';
+                indexDisplay.style.background = 'rgba(0,0,0,0.5)';
+                indexDisplay.style.color = 'white';
+                indexDisplay.style.padding = '2px 8px';
+                indexDisplay.style.borderRadius = '3px';
+                indexDisplay.style.fontSize = '12px';
+                indexDisplay.textContent = `${currentIndex + 1}/${imageNames.length}`;
+                previewEl.appendChild(indexDisplay);
             }
         } else {
             previewEl.innerHTML = '<div class="stj-preview-text stj-preview-error">ファイルが見つかりません</div>';
@@ -563,7 +633,7 @@
         const newItem = document.createElement('div');
         newItem.className = 'stj-keyword-item';
         newItem.innerHTML = `
-            <div class="stj-image-preview" id="stj_preview_${index}">
+            <div class="stj-image-preview" id="stj_preview_${index}" style="position: relative;">
                 <div class="stj-preview-text">プレビュー</div>
             </div>
             <div class="stj-inputs-container">
