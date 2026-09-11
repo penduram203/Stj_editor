@@ -89,6 +89,7 @@
     async function detectImageExtension(charName, imageName) {
         if (!charName || !imageName) return null;
         
+        // 既に拡張子が含まれている場合はそのままで存在確認
         if (imageName.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
             const path = `addchara/${charName}/${imageName}`;
             const exists = await checkMediaExists(path);
@@ -105,13 +106,13 @@
         return null;
     }
 
-    // 拡張子を含むパスからファイル名（拡張子なし）を抽出
+    // 拡張子を含むパスからファイル名（拡張子なし）を抽出（修正：末尾の拡張子のみを正確に削除）
     function extractFileNameFromPath(path) {
         if (!path) return '';
         const parts = path.split('/');
         const fileNameWithExt = parts[parts.length - 1];
-        const fileName = fileNameWithExt.split('.')[0];
-        return fileName;
+        // 最初のドットで切るのではなく、最後のドット＋拡張子部分のみ削除する
+        return fileNameWithExt.replace(/\.[^/.]+$/, '');
     }
 
     // ファイル名文字列を配列に変換（カンマ区切り対応）
@@ -153,7 +154,7 @@
     }
 
     // セルごとの要素イベント設定（反映ボタン & 削除ボタン）
-    function attachKeywordRowListeners(item) {
+    function attachKeywordRowListeners(item, index) {
         const deleteButton = item.querySelector('.stj-delete-row');
         if (deleteButton) {
             deleteButton.addEventListener('click', function(e) {
@@ -166,7 +167,7 @@
         if (applyButton) {
             applyButton.addEventListener('click', function(e) {
                 e.stopPropagation();
-                updateSingleRowPreview(item);
+                updateSinglePreview(index);
             });
         }
     }
@@ -224,6 +225,29 @@
                 </div>
             </div>
             <div id="stj_keywords_container" class="stj-grid-container">
+                <div class="stj-keyword-item">
+                    <div class="stj-image-preview" id="stj_preview_0" style="position: relative;">
+                        <div class="stj-preview-text">プレビュー</div>
+                    </div>
+                    <div class="stj-inputs-container">
+                        <div class="stj-input-row">
+                            <button class="stj-delete-row">×</button>
+                            <div class="stj-input-group stj-keyword-width">
+                                <label for="stj_keywords_0">キーワード</label>
+                                <input type="text" id="stj_keywords_0" class="stj-keyword-input">
+                            </div>
+                        </div>
+                        <div class="stj-input-row">
+                            <div class="stj-input-group stj-image-width">
+                                <label for="stj_image_name_0">ファイル名</label>
+                                <input type="text" id="stj_image_name_0" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                                <div>
+                                    <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="stj-button-group">
                 <button id="stj_add_keyword">キーワード追加</button>
@@ -250,21 +274,17 @@
             modal.style.height = '100vh';
             const charName = detectCharacterNameFromDOM() || '';
             document.getElementById('stj_char_name_display').textContent = charName;
-            
-            // データをロード
-            let loaded = await loadExistingJSONData(charName);
-            if (!loaded) {
-                loadSavedData(charName);
-            }
+            await loadExistingJSONData(charName);
+            loadSavedData(charName);
             setupPreviewListeners();
         });
         document.getElementById('stj_cancel_export').addEventListener('click', function(e) {
             e.stopPropagation();
             modal.style.display = 'none';
         });
-        document.getElementById('stj_export_json').addEventListener('click', function(e) {
+        document.getElementById('stj_export_json').addEventListener('click', async function(e) {
             e.stopPropagation();
-            exportJSON();
+            await exportJSON();
         });
         document.getElementById('stj_save_data').addEventListener('click', function(e) {
             e.stopPropagation();
@@ -289,29 +309,34 @@
                 }
             });
         });
+
+        const firstItem = modal.querySelector('.stj-keyword-item');
+        if (firstItem) {
+            attachKeywordRowListeners(firstItem, 0);
+        }
     }
 
-    // キーワード行の要素（HTML）を生成する共通ヘルパー
-    function createKeywordRowElement(data = { keyword: '', imageName: '' }) {
-        const uniqueId = 'stj_row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    function addKeywordRow(modal) {
+        const container = modal.querySelector('#stj_keywords_container');
+        const itemCount = container.querySelectorAll('.stj-keyword-item').length;
         const newItem = document.createElement('div');
         newItem.className = 'stj-keyword-item';
         newItem.innerHTML = `
-            <div class="stj-image-preview" style="position: relative;">
+            <div class="stj-image-preview" id="stj_preview_${itemCount}" style="position: relative;">
                 <div class="stj-preview-text">プレビュー</div>
             </div>
             <div class="stj-inputs-container">
                 <div class="stj-input-row">
                     <button class="stj-delete-row">×</button>
                     <div class="stj-input-group stj-keyword-width">
-                        <label for="kw_${uniqueId}">キーワード</label>
-                        <input type="text" id="kw_${uniqueId}" class="stj-keyword-input" value="${data.keyword || ''}">
+                        <label for="stj_keywords_${itemCount}">キーワード</label>
+                        <input type="text" id="stj_keywords_${itemCount}" class="stj-keyword-input">
                     </div>
                 </div>
                 <div class="stj-input-row">
                     <div class="stj-input-group stj-image-width">
-                        <label for="img_${uniqueId}">ファイル名</label>
-                        <input type="text" id="img_${uniqueId}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り">
+                        <label for="stj_image_name_${itemCount}">ファイル名</label>
+                        <input type="text" id="stj_image_name_${itemCount}" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                         <div>
                             <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
                         </div>
@@ -319,26 +344,16 @@
                 </div>
             </div>
         `;
-        attachKeywordRowListeners(newItem);
-        return newItem;
-    }
-
-    function addKeywordRow(modal) {
-        const container = modal.querySelector('#stj_keywords_container');
-        const newItem = createKeywordRowElement({ keyword: '', imageName: '' });
         container.appendChild(newItem);
+
+        attachKeywordRowListeners(newItem, itemCount);
 
         modal.scrollTop = modal.scrollHeight;
-        setTimeout(() => updateSingleRowPreview(newItem), 50);
-    }
-
-    function addKeywordRowWithData(container, data) {
-        const newItem = createKeywordRowElement(data);
-        container.appendChild(newItem);
+        setTimeout(() => updateSinglePreview(itemCount), 100);
     }
 
     async function loadExistingJSONData(charName) {
-        if (!charName) return false;
+        if (!charName) return;
         try {
             const jsonPath = `addchara/${charName}/${charName}_ext.json`;
             const response = await fetch(jsonPath);
@@ -348,13 +363,11 @@
                 if (imageMap) {
                     console.log(`✅ ${charName}_ext.json から既存データを読み込みました`);
                     populateFormFromImageMap(imageMap);
-                    return true;
                 }
             }
         } catch (e) {
             console.warn('既存JSONデータの取得に失敗しました:', e);
         }
-        return false;
     }
 
     function populateFormFromImageMap(imageMap) {
@@ -372,14 +385,14 @@
 
         const container = document.getElementById('stj_keywords_container');
         container.innerHTML = '';
-        let count = 0;
+        let index = 0;
         Object.entries(imageMap).forEach(([key, val]) => {
             if (key === 'default' || key === 'thumbnail') return;
-            addKeywordRowWithData(container, { keyword: key, imageName: toInputValue(val) });
-            count++;
+            addKeywordRowWithData(container, index, { keyword: key, imageName: toInputValue(val) });
+            index++;
         });
-        if (count === 0) {
-            addKeywordRowWithData(container, { keyword: '', imageName: '' });
+        if (index === 0) {
+            addKeywordRowWithData(container, 0, { keyword: '', imageName: '' });
         }
     }
 
@@ -392,23 +405,21 @@
         await updateImagePreview('stj_preview_default', charName, document.getElementById('stj_default_image')?.value);
         await updateImagePreview('stj_preview_thumbnail', charName, document.getElementById('stj_thumbnail_image')?.value);
         const keywordItems = document.querySelectorAll('.stj-keyword-item');
-        for (const item of keywordItems) {
-            await updateSingleRowPreview(item);
+        for (let i = 0; i < keywordItems.length; i++) {
+            await updateSinglePreview(i);
         }
     }
 
-    // 特定の行（Element）のプレビューを更新する関数
-    async function updateSingleRowPreview(itemElement) {
+    async function updateSinglePreview(index) {
         const charName = document.getElementById('stj_char_name_display').textContent;
-        const imageInput = itemElement.querySelector('.stj-image-input');
-        const previewEl = itemElement.querySelector('.stj-image-preview');
-        if (!imageInput || !previewEl) return;
-
-        await updateImagePreviewElement(previewEl, charName, imageInput.value);
+        const imageInput = document.getElementById(`stj_image_name_${index}`);
+        if (!imageInput) return;
+        await updateImagePreview(`stj_preview_${index}`, charName, imageInput.value);
     }
 
-    // Element直指定でプレビューを書き換える関数
-    async function updateImagePreviewElement(previewEl, charName, rawValue, targetIndex = 0) {
+    // 指定プレビューボックスへ画像または動画を表示（高速再生・キャッシュ最適化版）
+    async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
+        const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
 
         previewEl.style.position = 'relative';
@@ -433,6 +444,7 @@
             
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
+                // preload="auto" と playsinline で即時再生・高速化
                 mediaHtml = `
                     <video src="${fullPath}" autoplay loop muted playsinline preload="auto"
                            style="width: 100%; height: 100%; object-fit: contain; display: block; background-color: rgba(0,0,0,0.4);">
@@ -469,7 +481,7 @@
                 leftButton.style.cursor = 'pointer';
                 leftButton.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    updateImagePreviewElement(previewEl, charName, rawValue, currentIndex - 1);
+                    updateImagePreview(previewId, charName, rawValue, currentIndex - 1);
                 });
                 previewEl.appendChild(leftButton);
 
@@ -488,7 +500,7 @@
                 rightButton.style.cursor = 'pointer';
                 rightButton.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    updateImagePreviewElement(previewEl, charName, rawValue, currentIndex + 1);
+                    updateImagePreview(previewId, charName, rawValue, currentIndex + 1);
                 });
                 previewEl.appendChild(rightButton);
 
@@ -511,50 +523,59 @@
         }
     }
 
-    // ID指定用（デフォルト・サムネイル用）のラップ関数
-    async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
-        const previewEl = document.getElementById(previewId);
-        if (previewEl) {
-            await updateImagePreviewElement(previewEl, charName, rawValue, targetIndex);
-        }
-    }
+    // JSON出力用のパスを正確に生成する非同期関数（拡張子の重複防止と自動判定）
+    async function buildImageMapFromForm(charName) {
+        const toPaths = async (raw) => {
+            const names = parseImageNames(raw);
+            const results = [];
+            for (const name of names) {
+                const baseName = extractFileNameFromPath(name);
+                // 既に拡張子が含まれているか確認
+                let ext = '';
+                if (!name.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
+                    ext = await detectImageExtension(charName, baseName) || '';
+                }
+                const fullFileName = ext ? `${baseName}.${ext}` : name;
+                results.push(`addchara/${charName}/${fullFileName}`);
+            }
+            return results;
+        };
 
-    function buildImageMapFromForm(charName) {
-        const toPaths = (raw) => parseImageNames(raw).map(name => `addchara/${charName}/${extractFileNameFromPath(name)}`);
         const imageMap = {};
 
-        const defaultPaths = toPaths(document.getElementById('stj_default_image').value);
+        const defaultPaths = await toPaths(document.getElementById('stj_default_image').value);
         if (defaultPaths.length > 0) {
             imageMap.default = defaultPaths.length === 1 ? defaultPaths[0] : defaultPaths;
         }
 
-        const thumbnailPaths = toPaths(document.getElementById('stj_thumbnail_image').value);
+        const thumbnailPaths = await toPaths(document.getElementById('stj_thumbnail_image').value);
         if (thumbnailPaths.length > 0) {
             imageMap.thumbnail = thumbnailPaths.length === 1 ? thumbnailPaths[0] : thumbnailPaths;
         }
 
-        document.querySelectorAll('.stj-keyword-item').forEach(item => {
+        const keywordItems = document.querySelectorAll('.stj-keyword-item');
+        for (const item of keywordItems) {
             const keywordInput = item.querySelector('.stj-keyword-input');
             const imageInput = item.querySelector('.stj-image-input');
-            if (!keywordInput || !imageInput) return;
+            if (!keywordInput || !imageInput) continue;
             const keyword = keywordInput.value.trim();
-            if (!keyword) return;
-            const paths = toPaths(imageInput.value);
-            if (paths.length === 0) return;
+            if (!keyword) continue;
+            const paths = await toPaths(imageInput.value);
+            if (paths.length === 0) continue;
             imageMap[keyword] = paths.length === 1 ? paths[0] : paths;
-        });
+        }
 
         return imageMap;
     }
 
-    function exportJSON() {
+    async function exportJSON() {
         const charName = document.getElementById('stj_char_name_display').textContent;
         if (!charName) {
             alert('キャラクター名が設定されていません');
             return;
         }
 
-        const imageMap = buildImageMapFromForm(charName);
+        const imageMap = await buildImageMapFromForm(charName);
         const exportData = {
             image_display_extension: imageMap
         };
@@ -640,13 +661,45 @@
             const container = document.getElementById('stj_keywords_container');
             container.innerHTML = '';
             if (data.keywords && data.keywords.length > 0) {
-                data.keywords.forEach((kw) => {
-                    addKeywordRowWithData(container, kw);
+                data.keywords.forEach((kw, index) => {
+                    addKeywordRowWithData(container, index, kw);
                 });
             }
+            setTimeout(updatePreview, 100);
         } catch (e) {
             console.error('保存データの読み込みに失敗しました', e);
         }
+    }
+
+    function addKeywordRowWithData(container, index, data) {
+        const newItem = document.createElement('div');
+        newItem.className = 'stj-keyword-item';
+        newItem.innerHTML = `
+            <div class="stj-image-preview" id="stj_preview_${index}" style="position: relative;">
+                <div class="stj-preview-text">プレビュー</div>
+            </div>
+            <div class="stj-inputs-container">
+                <div class="stj-input-row">
+                    <button class="stj-delete-row">×</button>
+                    <div class="stj-input-group stj-keyword-width">
+                        <label for="stj_keywords_${index}">キーワード</label>
+                        <input type="text" id="stj_keywords_${index}" class="stj-keyword-input" value="${data.keyword || ''}">
+                    </div>
+                </div>
+                <div class="stj-input-row">
+                    <div class="stj-input-group stj-image-width">
+                        <label for="stj_image_name_${index}">ファイル名</label>
+                        <input type="text" id="stj_image_name_${index}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り">
+                        <div>
+                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(newItem);
+
+        attachKeywordRowListeners(newItem, index);
     }
 
     function initStjEditor() {
