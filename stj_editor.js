@@ -1,13 +1,20 @@
-import { getContext } from '../../../script.js';
+import { getContext } from '../../../script.js'; 
 import { extension_settings, saveSettingsDebounced } from '../../../extensions.js';
+import { 
+    ALLOWED_EXTENSIONS, 
+    checkImageExists, 
+    detectImageExtension, 
+    extractFileNameFromPath, 
+    parseImageNames, 
+    showCustomAlert 
+} from './stj-common.js';
 
 (function() {
-    const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp'];
     const MODULE_NAME = 'stj_editor';
 
     // extensionSettings の初期化・取得ヘルパー
     function getExtensionSettings() {
-        if (!extension_settings[MODULE_NAME]) {
+        if (typeof extension_settings[MODULE_NAME] === 'undefined') {
             extension_settings[MODULE_NAME] = {};
         }
         return extension_settings[MODULE_NAME];
@@ -16,54 +23,17 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
     // DOMからキャラクター名を検出する関数
     function detectCharacterNameFromDOM() {
         const nameHolder = document.querySelector('#character_name_holder');
-        if (nameHolder && nameHolder.textContent) return nameHolder.textContent.trim();
+        if (nameHolder && nameHolder.textContent) return nameHolder.textContent;
         const greetingMessage = document.querySelector('.mes[mesid="0"][is_user="false"]');
         if (greetingMessage && greetingMessage.getAttribute('ch_name')) return greetingMessage.getAttribute('ch_name');
         return null;
-    }
-
-    // 画像の存在確認関数
-    function checkImageExists(imageUrl) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => resolve(true);
-            img.onerror = () => resolve(false);
-            img.src = imageUrl;
-        });
-    }
-
-    // 画像の拡張子を自動検出する関数
-    async function detectImageExtension(charName, imageName) {
-        if (!charName || !imageName) return null;
-        for (const ext of ALLOWED_EXTENSIONS) {
-            const imagePath = `addchara/${charName}/${imageName}.${ext}`;
-            const exists = await checkImageExists(imagePath);
-            if (exists) {
-                return ext;
-            }
-        }
-        return null;
-    }
-
-    // 拡張子を含むパスからファイル名を抽出
-    function extractFileNameFromPath(path) {
-        if (!path) return '';
-        const parts = path.split('/');
-        const fileNameWithExt = parts[parts.length - 1];
-        const fileName = fileNameWithExt.split('.')[0];
-        return fileName;
-    }
-
-    // ファイル名文字列を配列に変換（カンマ区切り対応）
-    function parseImageNames(input) {
-        if (!input) return [];
-        return input.split(',').map(name => name.trim()).filter(name => name.length > 0);
     }
 
     // 新規ボタン作成関数
     function createExportButton() {
         const buttonContainer = document.querySelector('#rm_ch_create_block .form_create_bottom_buttons_block');
         if (!buttonContainer) {
+            console.error('Button container not found');
             return;
         }
         if (document.getElementById('stj_export_button')) {
@@ -77,25 +47,13 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
         createExportModal(exportButton);
     }
 
-    // デバウンス処理
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
     // モーダルウィンドウ作成関数
     function createExportModal(anchorButton) {
         const existingModal = document.getElementById('stj_export_modal');
         if (existingModal) {
             existingModal.remove();
         }
+
         const modal = document.createElement('div');
         modal.id = 'stj_export_modal';
         modal.style.display = 'none';
@@ -167,11 +125,15 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
         `;
         document.body.appendChild(modal);
 
-        modal.addEventListener('click', function(e) { e.stopPropagation(); });
+        modal.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+
         document.getElementById('stj_add_keyword').addEventListener('click', function(e) {
             e.stopPropagation();
             addKeywordRow(modal);
         });
+
         anchorButton.addEventListener('click', async function(e) {
             e.stopPropagation();
             modal.style.display = 'block';
@@ -179,24 +141,30 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
             modal.style.left = '10vw';
             modal.style.width = '80vw';
             modal.style.height = '100vh';
+
             const charName = detectCharacterNameFromDOM() || '';
             document.getElementById('stj_char_name_display').textContent = charName;
+
             await loadExistingJSONData(charName);
             loadSavedData(charName);
             setupPreviewListeners();
         });
+
         document.getElementById('stj_cancel_export').addEventListener('click', function(e) {
             e.stopPropagation();
             modal.style.display = 'none';
         });
+
         document.getElementById('stj_export_json').addEventListener('click', function(e) {
             e.stopPropagation();
             exportJSON();
         });
+
         document.getElementById('stj_save_data').addEventListener('click', function(e) {
             e.stopPropagation();
             saveData();
         });
+
         document.addEventListener('click', function(e) {
             if (e.target !== anchorButton && !modal.contains(e.target)) {
                 modal.style.display = 'none';
@@ -208,9 +176,12 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
             firstDeleteButton.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const item = this.closest('.stj-keyword-item');
-                if (item) { item.remove(); }
+                if (item) {
+                    item.remove();
+                }
             });
         }
+
         const imageInputs = ['stj_default_image', 'stj_thumbnail_image'];
         imageInputs.forEach(id => {
             const input = document.getElementById(id);
@@ -218,6 +189,18 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
                 input.addEventListener('input', debounce(updatePreview, 500));
             }
         });
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
     function addKeywordRow(modal) {
@@ -252,12 +235,14 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
             e.stopPropagation();
             newItem.remove();
         });
+
         const imageInput = newItem.querySelector('.stj-image-input');
         if (imageInput) {
             imageInput.addEventListener('input', debounce(function() {
                 updateSinglePreview(itemCount);
             }, 500));
         }
+
         modal.scrollTop = modal.scrollHeight;
         setTimeout(() => updateSinglePreview(itemCount), 100);
     }
@@ -267,72 +252,361 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
         try {
             const jsonPath = `addchara/${charName}/${charName}_ext.json`;
             const response = await fetch(jsonPath);
-            if (response.ok) {
-                const data = await response.json();
-                if (data) {
-                    // JSONデータ読み込み処理（必要に応じて展開）
+            if (!response.ok) return;
+
+            const jsonData = await response.json();
+            const imageData = jsonData.image_display_extension;
+            if (!imageData) return;
+
+            if (imageData.default) {
+                if (Array.isArray(imageData.default)) {
+                    const fileNames = imageData.default.map(path => extractFileNameFromPath(path));
+                    document.getElementById('stj_default_image').value = fileNames.join(', ');
+                } else {
+                    document.getElementById('stj_default_image').value = extractFileNameFromPath(imageData.default);
                 }
             }
-        } catch (e) {
-            console.warn('既存JSONデータの取得に失敗しました:', e);
+
+            if (imageData.thumbnail) {
+                if (Array.isArray(imageData.thumbnail)) {
+                    const fileNames = imageData.thumbnail.map(path => extractFileNameFromPath(path));
+                    document.getElementById('stj_thumbnail_image').value = fileNames.join(', ');
+                } else {
+                    document.getElementById('stj_thumbnail_image').value = extractFileNameFromPath(imageData.thumbnail);
+                }
+            }
+
+            const container = document.getElementById('stj_keywords_container');
+            container.innerHTML = '';
+            let keywordIndex = 0;
+            for (const [keyword, imagePaths] of Object.entries(imageData)) {
+                if (keyword === 'default' || keyword === 'thumbnail') continue;
+                if (Array.isArray(imagePaths)) {
+                    const fileNames = imagePaths.map(path => extractFileNameFromPath(path));
+                    addKeywordRowWithData(container, keywordIndex, { keyword: keyword, imageName: fileNames.join(', ') });
+                    keywordIndex++;
+                } else if (typeof imagePaths === 'string') {
+                    const fileName = extractFileNameFromPath(imagePaths);
+                    addKeywordRowWithData(container, keywordIndex, { keyword: keyword, imageName: fileName });
+                    keywordIndex++;
+                }
+            }
+
+            if (keywordIndex === 0) {
+                const modal = document.getElementById('stj_export_modal');
+                addKeywordRow(modal);
+            }
+        } catch (error) {
+            console.error('JSONデータの読み込みに失敗しました:', error);
         }
     }
 
     function setupPreviewListeners() {
-        // プレビューのイベント登録処理
+        document.querySelectorAll('.stj-image-input').forEach(input => {
+            const idParts = input.id.split('_');
+            const index = idParts[idParts.length - 1];
+            input.addEventListener('input', debounce(function() {
+                updateSinglePreview(index);
+            }, 500));
+        });
+        updateAllPreviews();
     }
 
-    function updatePreview() {
-        // 全プレビュー更新処理
-    }
+    async function updateSinglePreview(index) {
+        const charName = document.getElementById('stj_char_name_display').textContent;
+        if (!charName) return;
 
-    function updateSinglePreview(index) {
-        // 単一プレビュー更新処理
-    }
-
-    function exportJSON() {
-        // JSONダウンロード処理
-        const modal = document.getElementById('stj_export_modal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    function showCustomAlert(message) {
-        const existingAlert = document.getElementById('stj_custom_alert');
-        if (existingAlert) {
-            existingAlert.remove();
+        let imageInput;
+        if (index === 'default' || index === 'thumbnail') {
+            imageInput = document.getElementById(`stj_${index}_image`);
+        } else {
+            imageInput = document.getElementById(`stj_image_name_${index}`);
         }
-        const alertDiv = document.createElement('div');
-        alertDiv.id = 'stj_custom_alert';
-        alertDiv.textContent = message;
-        document.body.appendChild(alertDiv);
-        setTimeout(() => {
-            alertDiv.style.opacity = '1';
-            alertDiv.style.transform = 'translate(-50%, -50%) scale(1)';
-        }, 10);
-        setTimeout(() => {
-            alertDiv.style.opacity = '0';
-            alertDiv.style.transform = 'translate(-50%, -50%) scale(0.9)';
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.parentNode.removeChild(alertDiv);
-                }
-            }, 300);
-        }, 3000);
+
+        if (imageInput) {
+            const imageNamesString = imageInput.value;
+            const imageNames = parseImageNames(imageNamesString);
+            const preview = document.getElementById(`stj_preview_${index}`);
+            if (!preview) return;
+            preview.dataset.imageNames = JSON.stringify(imageNames);
+            preview.dataset.currentIndex = 0;
+
+            if (imageNames.length > 0) {
+                const firstImageName = imageNames[0];
+                const detectedExtension = await detectImageExtension(charName, firstImageName);
+                updateImagePreviewWithNavigation(index, firstImageName, detectedExtension, imageNames);
+            } else {
+                updateImagePreviewWithNavigation(index, '', null, []);
+            }
+        }
     }
 
-    // データ保存関数（extensionSettings（サーバー保存））
+    async function updateAllPreviews() {
+        const charName = document.getElementById('stj_char_name_display').textContent;
+        if (!charName) return;
+
+        await updateSinglePreview('default');
+        await updateSinglePreview('thumbnail');
+
+        const keywordItems = document.querySelectorAll('.stj-keyword-item');
+        for (let i = 0; i < keywordItems.length; i++) {
+            await updateSinglePreview(i);
+        }
+    }
+
+    async function updatePreview() {
+        await updateAllPreviews();
+    }
+
+    function updateImagePreviewWithNavigation(type, imageName, extension, imageNames) {
+        const charName = document.getElementById('stj_char_name_display').textContent;
+        if (!charName) return;
+        const preview = document.getElementById(`stj_preview_${type}`);
+        if (!preview) return;
+
+        preview.innerHTML = '';
+        const navContainer = document.createElement('div');
+        navContainer.style.width = '100%';
+        navContainer.style.height = '100%';
+        navContainer.style.display = 'flex';
+        navContainer.style.justifyContent = 'center';
+        navContainer.style.alignItems = 'center';
+        navContainer.style.position = 'relative';
+        navContainer.style.overflow = 'hidden';
+
+        if (imageNames.length > 1) {
+            const leftButton = document.createElement('button');
+            leftButton.innerHTML = '←';
+            leftButton.style.position = 'absolute';
+            leftButton.style.left = '5px';
+            leftButton.style.top = '50%';
+            leftButton.style.transform = 'translateY(-50%)';
+            leftButton.style.zIndex = '10';
+            leftButton.style.background = 'rgba(0,0,0,0.5)';
+            leftButton.style.color = 'white';
+            leftButton.style.border = 'none';
+            leftButton.style.borderRadius = '3px';
+            leftButton.style.padding = '5px 10px';
+            leftButton.style.cursor = 'pointer';
+            leftButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigatePreview(type, -1);
+            });
+            navContainer.appendChild(leftButton);
+
+            const rightButton = document.createElement('button');
+            rightButton.innerHTML = '→';
+            rightButton.style.position = 'absolute';
+            rightButton.style.right = '5px';
+            rightButton.style.top = '50%';
+            rightButton.style.transform = 'translateY(-50%)';
+            rightButton.style.zIndex = '10';
+            rightButton.style.background = 'rgba(0,0,0,0.5)';
+            rightButton.style.color = 'white';
+            rightButton.style.border = 'none';
+            rightButton.style.borderRadius = '3px';
+            rightButton.style.padding = '5px 10px';
+            rightButton.style.cursor = 'pointer';
+            rightButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigatePreview(type, 1);
+            });
+            navContainer.appendChild(rightButton);
+
+            const indexDisplay = document.createElement('div');
+            indexDisplay.style.position = 'absolute';
+            indexDisplay.style.bottom = '5px';
+            indexDisplay.style.left = '50%';
+            indexDisplay.style.transform = 'translateX(-50%)';
+            indexDisplay.style.zIndex = '10';
+            indexDisplay.style.background = 'rgba(0,0,0,0.5)';
+            indexDisplay.style.color = 'white';
+            indexDisplay.style.padding = '2px 8px';
+            indexDisplay.style.borderRadius = '3px';
+            indexDisplay.style.fontSize = '12px';
+            const currentIndex = parseInt(preview.dataset.currentIndex) || 0;
+            indexDisplay.textContent = `${currentIndex + 1}/${imageNames.length}`;
+            navContainer.appendChild(indexDisplay);
+        }
+
+        if (imageName && extension) {
+            const imagePath = `addchara/${charName}/${imageName}.${extension}`;
+            const img = document.createElement('img');
+            img.src = imagePath;
+            img.alt = `プレビュー: ${type}`;
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '100%';
+            img.style.objectFit = 'contain';
+
+            img.onload = function() {
+                navContainer.appendChild(img);
+            };
+            img.onerror = function() {
+                const text = document.createElement('div');
+                text.className = 'stj-preview-text stj-preview-error';
+                text.textContent = 'image not found';
+                navContainer.appendChild(text);
+            };
+        } else {
+            const text = document.createElement('div');
+            text.className = 'stj-preview-text';
+            text.textContent = type === 'default' ? 'デフォルト画像プレビュー' : type === 'thumbnail' ? 'サムネイル画像プレビュー' : '画像プレビュー';
+            navContainer.appendChild(text);
+        }
+        preview.appendChild(navContainer);
+    }
+
+    async function navigatePreview(type, direction) {
+        const preview = document.getElementById(`stj_preview_${type}`);
+        if (!preview) return;
+        const imageNames = JSON.parse(preview.dataset.imageNames || '[]');
+        let currentIndex = parseInt(preview.dataset.currentIndex) || 0;
+        if (imageNames.length <= 1) return;
+
+        currentIndex += direction;
+        if (currentIndex < 0) {
+            currentIndex = imageNames.length - 1;
+        } else if (currentIndex >= imageNames.length) {
+            currentIndex = 0;
+        }
+        preview.dataset.currentIndex = currentIndex;
+
+        const charName = document.getElementById('stj_char_name_display').textContent;
+        const imageName = imageNames[currentIndex];
+        const detectedExtension = await detectImageExtension(charName, imageName);
+        updateImagePreviewWithNavigation(type, imageName, detectedExtension, imageNames);
+    }
+
+    async function exportJSON() {
+        const charName = document.getElementById('stj_char_name_display').textContent;
+        if (!charName) {
+            alert('キャラクター名が設定されていません');
+            return;
+        }
+
+        const defaultImageInput = document.getElementById('stj_default_image').value;
+        const defaultImageNames = parseImageNames(defaultImageInput);
+        const thumbnailImageInput = document.getElementById('stj_thumbnail_image').value;
+        const thumbnailImageNames = parseImageNames(thumbnailImageInput);
+
+        const keywordItems = document.querySelectorAll('.stj-keyword-item');
+        const keywordImageMap = new Map();
+        let hasError = false;
+
+        const defaultImagePaths = [];
+        for (const imageName of defaultImageNames) {
+            const extension = await detectImageExtension(charName, imageName);
+            if (extension) {
+                const imagePath = `addchara/${charName}/${imageName}`;
+                defaultImagePaths.push(imagePath);
+            } else {
+                alert(`デフォルト画像ファイルが見つかりません: ${imageName}`);
+                hasError = true;
+                break;
+            }
+        }
+
+        const thumbnailImagePaths = [];
+        for (const imageName of thumbnailImageNames) {
+            const extension = await detectImageExtension(charName, imageName);
+            if (extension) {
+                const imagePath = `addchara/${charName}/${imageName}`;
+                thumbnailImagePaths.push(imagePath);
+            } else {
+                alert(`サムネイル画像ファイルが見つかりません: ${imageName}`);
+                hasError = true;
+                break;
+            }
+        }
+
+        if (hasError) return;
+
+        for (const item of keywordItems) {
+            const keywordInput = item.querySelector('.stj-keyword-input');
+            const imageInput = item.querySelector('.stj-image-input');
+            if (!keywordInput || !imageInput) continue;
+            const keyword = keywordInput.value;
+            const imageNamesString = imageInput.value;
+
+            if (keyword && imageNamesString) {
+                const imageNames = parseImageNames(imageNamesString);
+                const imagePaths = [];
+                for (const imageName of imageNames) {
+                    const extension = await detectImageExtension(charName, imageName);
+                    if (extension) {
+                        const imagePath = `addchara/${charName}/${imageName}`;
+                        imagePaths.push(imagePath);
+                    } else {
+                        alert(`画像ファイルが見つかりません: ${imageName}（キーワード: ${keyword}）`);
+                        hasError = true;
+                        break;
+                    }
+                }
+                if (!hasError && imagePaths.length > 0) {
+                    if (keywordImageMap.has(keyword)) {
+                        keywordImageMap.get(keyword).push(...imagePaths);
+                    } else {
+                        keywordImageMap.set(keyword, imagePaths);
+                    }
+                }
+            } else if (keyword || imageNamesString) {
+                alert(`キーワードと画像ファイル名の両方を入力してください（キーワード: ${keyword}）`);
+                hasError = true;
+            }
+        }
+
+        if (hasError) return;
+
+        if (keywordImageMap.size === 0 && defaultImagePaths.length === 0 && thumbnailImagePaths.length === 0) {
+            alert('少なくとも1つのキーワードと画像ファイル名のペアを入力してください');
+            return;
+        }
+        if (defaultImagePaths.length === 0) {
+            alert('デフォルト画像ファイルが見つかりません');
+            return;
+        }
+        if (thumbnailImagePaths.length === 0) {
+            alert('サムネイル画像ファイルが見つかりません');
+            return;
+        }
+
+        const imageDisplayExtension = {};
+        for (const [keyword, imagePaths] of keywordImageMap) {
+            imageDisplayExtension[keyword] = imagePaths.length === 1 ? imagePaths[0] : imagePaths;
+        }
+        imageDisplayExtension.default = defaultImagePaths.length === 1 ? defaultImagePaths[0] : defaultImagePaths;
+        imageDisplayExtension.thumbnail = thumbnailImagePaths.length === 1 ? thumbnailImagePaths[0] : thumbnailImagePaths;
+
+        const jsonData = { image_display_extension: imageDisplayExtension };
+        const jsonStr = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${charName}_ext.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        document.getElementById('stj_export_modal').style.display = 'none';
+    }
+
+    // データ保存関数
     function saveData() {
         const charName = document.getElementById('stj_char_name_display').textContent;
         if (!charName) {
             alert('キャラクター名が設定されていません');
             return;
         }
+
         const data = {
             charName: charName,
             defaultImage: document.getElementById('stj_default_image').value,
             thumbnailImage: document.getElementById('stj_thumbnail_image').value,
             keywords: []
         };
+
         const keywordItems = document.querySelectorAll('.stj-keyword-item');
         keywordItems.forEach(item => {
             const keywordInput = item.querySelector('.stj-keyword-input');
@@ -351,6 +625,7 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
         if (typeof saveSettingsDebounced === 'function') {
             saveSettingsDebounced();
         }
+
         showCustomAlert('データを保存しました');
     }
 
@@ -360,9 +635,11 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
         const stjSettings = getExtensionSettings();
         const data = stjSettings[charName];
         if (!data) return;
+
         try {
             document.getElementById('stj_default_image').value = data.defaultImage || '';
             document.getElementById('stj_thumbnail_image').value = data.thumbnailImage || '';
+
             const container = document.getElementById('stj_keywords_container');
             container.innerHTML = '';
             if (data.keywords && data.keywords.length > 0) {
@@ -400,29 +677,37 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
             </div>
         `;
         container.appendChild(newItem);
+        newItem.querySelector('.stj-delete-row').addEventListener('click', function() {
+            newItem.remove();
+        });
     }
 
-    /**
-     * SillyTavern EventSource を利用した初期化とイベントリレー
-     */
-    function initStjEditor() {
+    // イベント購読による UI パネル監視
+    try {
         const context = getContext();
         const eventSource = context.eventSource;
         const eventTypes = context.eventTypes;
 
-        // ボタン構築
-        createExportButton();
-
-        // チャット変更時、キャラクター読み込み時などのSillyTavernイベントをフックしてボタン再配置やUI更新を実施
         if (eventSource && eventTypes) {
-            eventSource.on(eventTypes.CHAT_CHANGED, createExportButton);
-            eventSource.on(eventTypes.CHARACTER_LOADED, createExportButton);
-            eventSource.on(eventTypes.APP_READY, createExportButton);
+            eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, () => {
+                if (document.getElementById('rm_ch_create_block')) {
+                    createExportButton();
+                }
+            });
         }
+    } catch (e) {
+        console.error("stj_editor: イベント登録エラー", e);
     }
 
-    // jQuery Readyで初期化実行
-    $(document).ready(() => {
-        initStjEditor();
-    });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.getElementById('rm_ch_create_block')) {
+                createExportButton();
+            }
+        });
+    } else {
+        if (document.getElementById('rm_ch_create_block')) {
+            createExportButton();
+        }
+    }
 })();
