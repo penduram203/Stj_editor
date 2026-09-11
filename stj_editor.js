@@ -1,16 +1,43 @@
-import { getContext } from '../../../script.js';
-import { extension_settings, saveSettingsDebounced } from '../../../extensions.js';
-
+// 修正版:
+// 旧コードは `import { getContext } from '../../../script.js';` としていたが、
+// third-party 拡張機能から script.js までのパスは本来 4階層上る必要があり（3階層では不足）、
+// ブラウザが /script.js ではなく /scripts/script.js を要求してしまい 404 → HTMLが返り
+// 「MIMEタイプが許可されていない」エラーで拡張機能全体が読み込めなくなっていた。
+// これらの静的importはすべて廃止し、実行時に window.SillyTavern.getContext() を
+// 呼び出す方式（公式ドキュメント推奨）に統一する。
 (function() {
     const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp'];
     const MODULE_NAME = 'stj_editor';
 
+    // SillyTavern context を取得するヘルパー（未取得ならnull）
+    function getSTContext() {
+        if (window.SillyTavern && typeof window.SillyTavern.getContext === 'function') {
+            return window.SillyTavern.getContext();
+        }
+        return null;
+    }
+
     // extensionSettings の初期化・取得ヘルパー
     function getExtensionSettings() {
-        if (!extension_settings[MODULE_NAME]) {
-            extension_settings[MODULE_NAME] = {};
+        const context = getSTContext();
+        if (!context || !context.extensionSettings) {
+            console.warn('[STJ Editor] SillyTavern context が取得できませんでした。');
+            return {};
         }
-        return extension_settings[MODULE_NAME];
+        if (!context.extensionSettings[MODULE_NAME]) {
+            context.extensionSettings[MODULE_NAME] = {};
+        }
+        return context.extensionSettings[MODULE_NAME];
+    }
+
+    // 設定をサーバー側へ保存依頼するヘルパー
+    function persistSettings() {
+        const context = getSTContext();
+        if (context && typeof context.saveSettingsDebounced === 'function') {
+            context.saveSettingsDebounced();
+        } else {
+            console.warn('[STJ Editor] saveSettingsDebounced が利用できないため設定を保存できませんでした。');
+        }
     }
 
     // DOMからキャラクター名を検出する関数
@@ -348,9 +375,7 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
         const stjSettings = getExtensionSettings();
         stjSettings[charName] = data;
 
-        if (typeof saveSettingsDebounced === 'function') {
-            saveSettingsDebounced();
-        }
+        persistSettings();
         showCustomAlert('データを保存しました');
     }
 
@@ -406,7 +431,13 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
      * SillyTavern EventSource を利用した初期化とイベントリレー
      */
     function initStjEditor() {
-        const context = getContext();
+        const context = getSTContext();
+        if (!context) {
+            // SillyTavern本体の初期化がまだ済んでいない可能性があるため少し待って再試行
+            setTimeout(initStjEditor, 500);
+            return;
+        }
+
         const eventSource = context.eventSource;
         const eventTypes = context.eventTypes;
 
@@ -415,9 +446,17 @@ import { extension_settings, saveSettingsDebounced } from '../../../extensions.j
 
         // チャット変更時、キャラクター読み込み時などのSillyTavernイベントをフックしてボタン再配置やUI更新を実施
         if (eventSource && eventTypes) {
-            eventSource.on(eventTypes.CHAT_CHANGED, createExportButton);
-            eventSource.on(eventTypes.CHARACTER_LOADED, createExportButton);
-            eventSource.on(eventTypes.APP_READY, createExportButton);
+            if (eventTypes.CHAT_CHANGED) {
+                eventSource.on(eventTypes.CHAT_CHANGED, createExportButton);
+            }
+            if (eventTypes.CHARACTER_LOADED) {
+                eventSource.on(eventTypes.CHARACTER_LOADED, createExportButton);
+            }
+            if (eventTypes.APP_READY) {
+                eventSource.on(eventTypes.APP_READY, createExportButton);
+            }
+        } else {
+            console.warn('[STJ Editor] eventSource or eventTypes not found in context.');
         }
     }
 
