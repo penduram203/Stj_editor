@@ -2,6 +2,9 @@
     const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp', 'mp4', 'webm'];
     const MODULE_NAME = 'stj_editor';
 
+    // 動画・画像のプリロード用キャッシュマップ
+    const mediaCache = new Map();
+
     // 動画ファイルかどうかを判定
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
@@ -48,18 +51,35 @@
         return null;
     }
 
-    // メディア（画像・動画）の存在確認関数
+    // メディアの高速存在確認 & キャッシュ化
     function checkMediaExists(mediaUrl) {
+        if (mediaCache.has(mediaUrl)) {
+            return Promise.resolve(mediaCache.get(mediaUrl));
+        }
+
         return new Promise((resolve) => {
             if (isVideoUrl(mediaUrl)) {
                 const video = document.createElement('video');
-                video.onloadedmetadata = () => resolve(true);
-                video.onerror = () => resolve(false);
+                video.preload = 'metadata';
+                video.onloadedmetadata = () => {
+                    mediaCache.set(mediaUrl, true);
+                    resolve(true);
+                };
+                video.onerror = () => {
+                    mediaCache.set(mediaUrl, false);
+                    resolve(false);
+                };
                 video.src = mediaUrl;
             } else {
                 const img = new Image();
-                img.onload = () => resolve(true);
-                img.onerror = () => resolve(false);
+                img.onload = () => {
+                    mediaCache.set(mediaUrl, true);
+                    resolve(true);
+                };
+                img.onerror = () => {
+                    mediaCache.set(mediaUrl, false);
+                    resolve(false);
+                };
                 img.src = mediaUrl;
             }
         });
@@ -121,12 +141,9 @@
     // 新規ボタン作成関数
     function createExportButton() {
         const buttonContainer = document.querySelector('#rm_ch_create_block .form_create_bottom_buttons_block');
-        if (!buttonContainer) {
-            return;
-        }
-        if (document.getElementById('stj_export_button')) {
-            return;
-        }
+        if (!buttonContainer) return;
+        if (document.getElementById('stj_export_button')) return;
+
         const exportButton = document.createElement('button');
         exportButton.id = 'stj_export_button';
         exportButton.textContent = 'JSONデータ編集';
@@ -135,20 +152,7 @@
         createExportModal(exportButton);
     }
 
-    // デバウンス処理
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    // キーワード行に「削除」「プレビュー自動更新」のイベントを付与する共通処理
+    // セルごとの要素イベント設定（反映ボタン & 削除ボタン）
     function attachKeywordRowListeners(item, index) {
         const deleteButton = item.querySelector('.stj-delete-row');
         if (deleteButton) {
@@ -157,20 +161,21 @@
                 item.remove();
             });
         }
-        const imageInput = item.querySelector('.stj-image-input');
-        if (imageInput) {
-            imageInput.addEventListener('input', debounce(function() {
+
+        const applyButton = item.querySelector('.stj-apply-row');
+        if (applyButton) {
+            applyButton.addEventListener('click', function(e) {
+                e.stopPropagation();
                 updateSinglePreview(index);
-            }, 500));
+            });
         }
     }
 
     // モーダルウィンドウ作成関数
     function createExportModal(anchorButton) {
         const existingModal = document.getElementById('stj_export_modal');
-        if (existingModal) {
-            existingModal.remove();
-        }
+        if (existingModal) existingModal.remove();
+
         const modal = document.createElement('div');
         modal.id = 'stj_export_modal';
         modal.style.display = 'none';
@@ -191,7 +196,10 @@
                     <div class="stj-special-inputs">
                         <div class="stj-input-group">
                             <label for="stj_default_image">ファイル名</label>
-                            <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
+                                <button type="button" class="stj-apply-special" data-target="default" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -204,7 +212,10 @@
                     <div class="stj-special-inputs">
                         <div class="stj-input-group">
                             <label for="stj_thumbnail_image">ファイル名</label>
-                            <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
+                                <button type="button" class="stj-apply-special" data-target="thumbnail" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -225,7 +236,10 @@
                         <div class="stj-input-row">
                             <div class="stj-input-group stj-image-width">
                                 <label for="stj_image_name_0">ファイル名</label>
-                                <input type="text" id="stj_image_name_0" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                                <div style="display: flex; gap: 5px;">
+                                    <input type="text" id="stj_image_name_0" class="stj-image-input" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
+                                    <button type="button" class="stj-apply-row" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -278,18 +292,24 @@
             }
         });
 
+        // デフォルト/サムネイルの変更反映ボタン設定
+        modal.querySelectorAll('.stj-apply-special').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const charName = document.getElementById('stj_char_name_display').textContent;
+                const target = this.getAttribute('data-target');
+                if (target === 'default') {
+                    updateImagePreview('stj_preview_default', charName, document.getElementById('stj_default_image')?.value);
+                } else if (target === 'thumbnail') {
+                    updateImagePreview('stj_preview_thumbnail', charName, document.getElementById('stj_thumbnail_image')?.value);
+                }
+            });
+        });
+
         const firstItem = modal.querySelector('.stj-keyword-item');
         if (firstItem) {
             attachKeywordRowListeners(firstItem, 0);
         }
-
-        const imageInputs = ['stj_default_image', 'stj_thumbnail_image'];
-        imageInputs.forEach(id => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.addEventListener('input', debounce(updatePreview, 500));
-            }
-        });
     }
 
     function addKeywordRow(modal) {
@@ -312,7 +332,10 @@
                 <div class="stj-input-row">
                     <div class="stj-input-group stj-image-width">
                         <label for="stj_image_name_${itemCount}">ファイル名</label>
-                        <input type="text" id="stj_image_name_${itemCount}" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="stj_image_name_${itemCount}" class="stj-image-input" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
+                            <button type="button" class="stj-apply-row" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -390,12 +413,11 @@
         await updateImagePreview(`stj_preview_${index}`, charName, imageInput.value);
     }
 
-    // 指定プレビューボックスへ画像または動画を表示する処理（複数枚ナビゲーション機能対応）
+    // 指定プレビューボックスへ画像または動画を表示（高速再生・キャッシュ最適化版）
     async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
         const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
 
-        // 相対位置指定（ボタンオーバーレイ用）を適用
         previewEl.style.position = 'relative';
 
         const imageNames = parseImageNames(rawValue);
@@ -405,7 +427,6 @@
             return;
         }
 
-        // インデックス範囲のループ制御
         let currentIndex = targetIndex;
         if (currentIndex < 0) currentIndex = imageNames.length - 1;
         if (currentIndex >= imageNames.length) currentIndex = 0;
@@ -419,8 +440,9 @@
             
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
+                // preload="auto" と playsinline で即時再生・高速化
                 mediaHtml = `
-                    <video src="${fullPath}" autoplay loop muted playsinline 
+                    <video src="${fullPath}" autoplay loop muted playsinline preload="auto"
                            style="width: 100%; height: 100%; object-fit: contain; display: block; background-color: rgba(0,0,0,0.4);">
                     </video>`;
             } else {
@@ -433,10 +455,12 @@
 
             if (isVideoUrl(fullPath)) {
                 const vid = previewEl.querySelector('video');
-                if (vid) vid.play().catch(() => {});
+                if (vid) {
+                    vid.play().catch(() => {});
+                }
             }
 
-            // 複数指定がある場合はナビゲーションボタンとインデックスを表示
+            // 複数指定時のナビゲーションボタン & インデックス表示
             if (imageNames.length > 1) {
                 const leftButton = document.createElement('button');
                 leftButton.innerHTML = '←';
@@ -555,9 +579,8 @@
 
     function showCustomAlert(message) {
         const existingAlert = document.getElementById('stj_custom_alert');
-        if (existingAlert) {
-            existingAlert.remove();
-        }
+        if (existingAlert) existingAlert.remove();
+
         const alertDiv = document.createElement('div');
         alertDiv.id = 'stj_custom_alert';
         alertDiv.textContent = message;
@@ -570,9 +593,7 @@
             alertDiv.style.opacity = '0';
             alertDiv.style.transform = 'translate(-50%, -50%) scale(0.9)';
             setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.parentNode.removeChild(alertDiv);
-                }
+                if (alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
             }, 300);
         }, 3000);
     }
@@ -647,7 +668,10 @@
                 <div class="stj-input-row">
                     <div class="stj-input-group stj-image-width">
                         <label for="stj_image_name_${index}">ファイル名</label>
-                        <input type="text" id="stj_image_name_${index}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り">
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="stj_image_name_${index}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り" style="flex: 1;">
+                            <button type="button" class="stj-apply-row" style="padding: 2px 8px; cursor: pointer;">反映</button>
+                        </div>
                     </div>
                 </div>
             </div>
