@@ -58,17 +58,14 @@
             video.classList.add('stj-media-preview');
             
             video.style.maxWidth = '100%';
-            video.style.maxHeight = '200px';
+            video.style.maxHeight = '180px';
             video.style.objectFit = 'contain';
             video.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
             video.style.display = 'block';
             video.style.borderRadius = '5px';
             video.style.marginTop = '5px';
 
-            video.play().catch(err => {
-                console.warn(`${LOG_PREFIX} 動画自動再生エラー:`, err);
-            });
-
+            video.play().catch(() => {});
             return video;
         } else {
             const img = document.createElement('img');
@@ -77,7 +74,7 @@
             img.classList.add('stj-media-preview');
             
             img.style.maxWidth = '100%';
-            img.style.maxHeight = '200px';
+            img.style.maxHeight = '180px';
             img.style.objectFit = 'contain';
             img.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
             img.style.display = 'block';
@@ -95,11 +92,10 @@
         const charName = character?.name;
 
         if (!charName) {
-            alert('キャラクターが選択されていません。');
+            alert('現在選択されているキャラクターが見つかりません。チャット画面でキャラクターを選択してください。');
             return;
         }
 
-        // 既存のモーダルがあれば削除
         const oldModal = document.getElementById('stj-editor-modal');
         if (oldModal) oldModal.remove();
 
@@ -115,30 +111,32 @@
             console.warn(`${LOG_PREFIX} JSONの読み込み失敗 (新規作成します):`, e);
         }
 
-        // モーダル外枠作成
+        // モーダル外枠
         const modal = document.createElement('div');
         modal.id = 'stj-editor-modal';
         modal.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.7); display: flex; justify-content: center;
-            align-items: center; z-index: 10000; color: #fff;
+            background: rgba(0, 0, 0, 0.75); display: flex; justify-content: center;
+            align-items: center; z-index: 100000; color: #fff; font-family: sans-serif;
         `;
 
         const dialog = document.createElement('div');
         dialog.style.cssText = `
-            background: #222; border: 1px solid #444; border-radius: 8px;
-            padding: 20px; width: 600px; max-width: 90vw; max-height: 85vh;
-            display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+            background: #222530; border: 1px solid #444b60; border-radius: 8px;
+            padding: 20px; width: 650px; max-width: 92vw; max-height: 85vh;
+            display: flex; flex-direction: column; gap: 12px; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.5);
         `;
 
         dialog.innerHTML = `
-            <h3 style="margin:0 0 10px 0;">JSONデータ編集 (${charName})</h3>
-            <p style="font-size:0.85em; opacity:0.8; margin:0;">各感情・状態キーに対応する画像/動画パスまたはファイル名を編集できます。</p>
+            <div style="display:flex; justify-size:space-between; align-items:center; border-bottom: 1px solid #444; padding-bottom: 8px;">
+                <h3 style="margin:0; font-size: 1.2em; color: #4da6ff;">⚙️ JSONデータ編集: ${charName}</h3>
+            </div>
+            <p style="font-size:0.85em; opacity:0.8; margin:0;">各感情・状態キー（default, happy, thumbnail など）に対応する画像/動画ファイル名を保存します。</p>
             <div id="stj-fields-container" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;"></div>
-            <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
-                <button id="stj-add-key-btn" class="menu_button">キーを追加</button>
-                <button id="stj-save-btn" class="menu_button result_condition_active">保存</button>
-                <button id="stj-close-btn" class="menu_button">キャンセル</button>
+            <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end; border-top: 1px solid #444; padding-top: 12px;">
+                <button id="stj-add-key-btn" class="menu_button" style="background:#3a3f58; color:#fff;">+ キーを追加</button>
+                <button id="stj-save-btn" class="menu_button result_condition_active" style="background:#28a745; color:#fff;">保存</button>
+                <button id="stj-close-btn" class="menu_button" style="background:#555; color:#fff;">キャンセル</button>
             </div>
         `;
 
@@ -147,11 +145,10 @@
 
         const container = dialog.querySelector('#stj-fields-container');
 
-        // 各フィールドの描画処理
         async function renderField(key, value) {
             const row = document.createElement('div');
             row.className = 'stj-item-row';
-            row.style.cssText = 'background: #333; padding: 10px; border-radius: 5px; border: 1px solid #555;';
+            row.style.cssText = 'background: #1a1c23; padding: 10px; border-radius: 5px; border: 1px solid #333d52;';
 
             const topDiv = document.createElement('div');
             topDiv.style.cssText = 'display: flex; gap: 8px; align-items: center;';
@@ -160,17 +157,17 @@
             keyInput.type = 'text';
             keyInput.value = key;
             keyInput.placeholder = 'キー名 (例: default, happy)';
-            keyInput.style.cssText = 'flex: 1; padding: 5px; background: #111; color: #fff; border: 1px solid #666; border-radius: 3px;';
+            keyInput.style.cssText = 'flex: 1; padding: 6px; background: #0e1015; color: #fff; border: 1px solid #444; border-radius: 4px;';
 
             const valInput = document.createElement('input');
             valInput.type = 'text';
             valInput.value = value;
-            valInput.placeholder = 'ファイル名/パス (例: defa.png, test.mp4)';
-            valInput.style.cssText = 'flex: 2; padding: 5px; background: #111; color: #fff; border: 1px solid #666; border-radius: 3px;';
+            valInput.placeholder = 'ファイル名 (例: defa.png, sakiba.mp4)';
+            valInput.style.cssText = 'flex: 2; padding: 6px; background: #0e1015; color: #fff; border: 1px solid #444; border-radius: 4px;';
 
             const delBtn = document.createElement('button');
             delBtn.textContent = '削除';
-            delBtn.style.cssText = 'background: #a22; color: #fff; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;';
+            delBtn.style.cssText = 'background: #dc3545; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;';
             delBtn.onclick = () => row.remove();
 
             topDiv.appendChild(keyInput);
@@ -178,7 +175,7 @@
             topDiv.appendChild(delBtn);
 
             const previewArea = document.createElement('div');
-            previewArea.style.marginTop = '5px';
+            previewArea.style.marginTop = '6px';
 
             const updatePreview = async () => {
                 previewArea.innerHTML = '';
@@ -202,19 +199,14 @@
             container.appendChild(row);
         }
 
-        // 既存データの読み込み・展開
         for (const [k, v] of Object.entries(jsonData)) {
             const valStr = Array.isArray(v) ? v[0] : v;
             await renderField(k, valStr);
         }
 
-        // キー追加ボタン
         dialog.querySelector('#stj-add-key-btn').onclick = () => renderField('', '');
-
-        // キャンセルボタン
         dialog.querySelector('#stj-close-btn').onclick = () => modal.remove();
 
-        // 保存ボタン
         dialog.querySelector('#stj-save-btn').onclick = async () => {
             const rows = container.querySelectorAll('.stj-item-row');
             const newJson = {};
@@ -226,7 +218,6 @@
             });
 
             try {
-                // SillyTavern への保存 API 送信
                 const response = await fetch('/api/plugins/stj_editor/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -236,51 +227,62 @@
                 if (response.ok) {
                     alert('JSONデータを保存しました。');
                     modal.remove();
-                    // キャラクター描画の更新イベントを破棄・再トリガー
                     if (context && context.eventSource) {
                         context.eventSource.emit(context.eventTypes.CHARACTER_SELECTED, context.characterId);
                     }
                 } else {
-                    // APIが未実装な場合のフォールバック（ファイルダウンロード）
                     const blob = new Blob([JSON.stringify(newJson, null, 2)], { type: 'application/json' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
                     a.download = `${charName}_ext.json`;
                     a.click();
-                    alert('保存用APIが応答しないため、JSONファイルをダウンロードしました。');
+                    alert('API未応答のため、JSONファイルをダウンロードしました。');
                     modal.remove();
                 }
             } catch (err) {
                 console.error(`${LOG_PREFIX} 保存エラー:`, err);
-                alert('保存に失敗しました。');
+                alert('保存処理に失敗しました。');
             }
         };
     }
 
-    // --- 「JSONデータ編集」ボタンをUIに注入 ---
+    // --- ボタンのUI注入 (複数の場所に安全に追加) ---
     function injectEditorButton() {
         if (document.getElementById('stj-edit-json-btn')) return;
 
-        // キャラクターエディタ画面 / 設定パネル内の挿入先ターゲットを自動検索
-        const targetContainer = document.querySelector('#character_popup .extra_editor_buttons, #character_popup .avatar_upload_controls, #character_popup, #character_edit_fields');
+        // ボタン作成
+        const btn = document.createElement('div');
+        btn.id = 'stj-edit-json-btn';
+        btn.className = 'menu_button fa-solid fa-file-code interactable';
+        btn.title = 'JSONデータ編集 (Stj Editor)';
+        btn.style.cssText = 'cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; margin: 2px; font-weight: bold; background: rgba(77, 166, 255, 0.2); border: 1px solid #4da6ff; border-radius: 4px; color: #fff;';
+        btn.innerHTML = '<span style="font-size: 0.9em; margin-left: 4px;">⚙️ JSON編集</span>';
+        
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openStjEditor();
+        };
 
-        if (targetContainer) {
-            const btn = document.createElement('button');
-            btn.id = 'stj-edit-json-btn';
-            btn.className = 'menu_button';
-            btn.innerHTML = '⚙️ JSONデータ編集';
-            btn.style.cssText = 'margin-top: 8px; width: 100%; background: #3a3f58; color: #fff;';
-            btn.onclick = (e) => {
-                e.preventDefault();
-                openStjEditor();
-            };
+        // 優先度1: トップバー (画面上部メニュー)
+        const topBar = document.querySelector('#top-bar, #top_bar, .top-bar-controls');
+        // 優先度2: キャラクター管理ポップアップ内
+        const charPopup = document.querySelector('#character_popup .extra_editor_buttons, #character_popup, #character_edit_fields');
+        // 優先度3: 拡張機能メニュー / ツールバー
+        const extMenu = document.querySelector('#extensions_settings, #rm_extensions_block');
 
-            targetContainer.appendChild(btn);
-            console.log(`${LOG_PREFIX} 「JSONデータ編集」ボタンを追加しました。`);
+        if (topBar) {
+            topBar.appendChild(btn);
+            console.log(`${LOG_PREFIX} 「JSONデータ編集」ボタンをトップバーに追加しました。`);
+        } else if (charPopup) {
+            charPopup.appendChild(btn);
+            console.log(`${LOG_PREFIX} 「JSONデータ編集」ボタンをキャラ設定領域に追加しました。`);
+        } else if (extMenu) {
+            extMenu.appendChild(btn);
+            console.log(`${LOG_PREFIX} 「JSONデータ編集」ボタンを拡張機能メニューに追加しました。`);
         }
     }
 
-    // デバウンス処理
     function debounce(func, wait) {
         let timeout;
         return function (...args) {
@@ -293,14 +295,7 @@
 
     // --- DOM監視 ---
     function setupMutationObserver() {
-        const observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.addedNodes.length > 0) {
-                    debouncedInject();
-                }
-            }
-        });
-
+        const observer = new MutationObserver(() => debouncedInject());
         observer.observe(document.body, { childList: true, subtree: true });
         console.log(`${LOG_PREFIX} エディタUI描画の監視を開始しました。`);
     }
@@ -321,228 +316,17 @@
                 safeOn(eventTypes.CHARACTER_EDITOR_OPENED, debouncedInject);
                 safeOn(eventTypes.CHARACTER_SELECTED, debouncedInject);
                 safeOn(eventTypes.CHARACTER_PAGE_LOADED, debouncedInject);
-
-                console.log(`${LOG_PREFIX} Event listeners registered successfully`);
+                safeOn(eventTypes.APP_READY, debouncedInject);
             }
         }
     }
 
     // --- 初期化 ---
     function init() {
-        console.log(`${LOG_PREFIX} Stj Editor extension loaded with video support & UI Injection`);
+        console.log(`${LOG_PREFIX} Stj Editor extension loaded with TopBar & Modal Support`);
         setupEventSourceListeners();
         setupMutationObserver();
-        debouncedInject();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-})();(function () {
-    const MODULE_NAME = 'stj_editor';
-    const LOG_PREFIX = '[StjEditor DEBUG]';
-
-    // --- 拡張子自動検出＆動画対応ロジック ---
-    const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp', 'mp4', 'webm'];
-
-    function isVideoUrl(url) {
-        if (!url || typeof url !== 'string') return false;
-        return !!url.match(/\.(mp4|webm)$/i);
-    }
-
-    function checkMediaExists(mediaUrl) {
-        return new Promise((resolve) => {
-            if (!mediaUrl || typeof mediaUrl !== 'string' || !mediaUrl.trim()) return resolve(false);
-            if (isVideoUrl(mediaUrl)) {
-                const video = document.createElement('video');
-                video.onloadedmetadata = () => resolve(true);
-                video.onerror = () => resolve(false);
-                video.src = mediaUrl;
-            } else {
-                const img = new Image();
-                img.onload = () => resolve(true);
-                img.onerror = () => resolve(false);
-                img.src = mediaUrl;
-            }
-        });
-    }
-
-    async function detectMediaExtension(basePath) {
-        if (!basePath || typeof basePath !== 'string' || !basePath.trim()) return null;
-        const cleanPath = basePath.trim();
-        
-        if (cleanPath.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
-            return cleanPath;
-        }
-
-        for (const ext of ALLOWED_EXTENSIONS) {
-            const pathWithExt = `${cleanPath}.${ext}`;
-            const exists = await checkMediaExists(pathWithExt);
-            if (exists) {
-                return pathWithExt;
-            }
-        }
-        return null;
-    }
-
-    // --- メディアDOM要素（img または video）の生成 ---
-    function createMediaElement(src, altText = '') {
-        if (isVideoUrl(src)) {
-            const video = document.createElement('video');
-            video.src = src;
-            video.autoplay = true;
-            video.loop = true;
-            video.muted = true;
-            video.defaultMuted = true;
-            video.playsInline = true;
-            video.classList.add('stj-media-preview');
-            
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'contain';
-            video.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
-            video.style.display = 'block';
-
-            video.play().catch(err => {
-                console.warn(`${LOG_PREFIX} 動画の自動再生がブロックされました:`, err);
-            });
-
-            video.onerror = async () => {
-                console.warn(`${LOG_PREFIX} 動画読み込みエラー。拡張子再検出を実行: ${src}`);
-                const detected = await detectMediaExtension(src);
-                if (detected && detected !== src) {
-                    video.src = detected;
-                    video.play().catch(() => {});
-                }
-            };
-            return video;
-        } else {
-            const img = document.createElement('img');
-            img.src = src;
-            img.alt = altText;
-            img.classList.add('stj-media-preview');
-            
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'contain';
-            img.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
-            img.style.display = 'block';
-
-            img.onerror = async () => {
-                console.warn(`${LOG_PREFIX} 画像読み込みエラー。拡張子再検出を実行: ${src}`);
-                const detected = await detectMediaExtension(src);
-                if (detected && detected !== src) {
-                    img.src = detected;
-                }
-            };
-            return img;
-        }
-    }
-
-    // --- メディアプレビューレンダラー ---
-    async function renderMediaPreview(container, mediaPath) {
-        if (!container) return;
-        container.innerHTML = '';
-        
-        if (!mediaPath || typeof mediaPath !== 'string' || !mediaPath.trim()) {
-            return;
-        }
-
-        const detectedPath = await detectMediaExtension(mediaPath);
-        if (!detectedPath) {
-            console.warn(`${LOG_PREFIX} メディアが見つかりませんでした: ${mediaPath}`);
-            return;
-        }
-
-        const mediaEl = createMediaElement(detectedPath);
-        container.appendChild(mediaEl);
-    }
-
-    // --- STJ Editor メインUIの初期化と入力フィールド監視 ---
-    function setupEditorUI() {
-        console.log(`${LOG_PREFIX} Setting up UI elements and event handlers...`);
-
-        // 入力フィールドまたはJSONプレビューの更新イベントにフック
-        document.addEventListener('input', async (e) => {
-            if (e.target && (e.target.classList.contains('stj-input-path') || e.target.id === 'stj-image-path-input')) {
-                const targetValue = e.target.value;
-                const previewContainer = document.querySelector('#stj-preview-container, .stj-preview-area');
-                if (previewContainer) {
-                    await renderMediaPreview(previewContainer, targetValue);
-                }
-            }
-        });
-
-        // 既存のプレビュー領域を更新
-        const existingInputs = document.querySelectorAll('.stj-input-path, #stj-image-path-input');
-        existingInputs.forEach(async (input) => {
-            const previewContainer = input.closest('.stj-item-row')?.querySelector('.stj-preview-container') || document.querySelector('#stj-preview-container');
-            if (previewContainer && input.value) {
-                await renderMediaPreview(previewContainer, input.value);
-            }
-        });
-    }
-
-    // デバウンス処理
-    function debounce(func, wait) {
-        let timeout;
-        return function (...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func(...args), wait);
-        };
-    }
-
-    const debouncedInitUI = debounce(setupEditorUI, 300);
-
-    // --- DOM監視 ---
-    function setupMutationObserver() {
-        const observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.addedNodes.length > 0) {
-                    const hasEditor = Array.from(mutation.addedNodes).some(node => 
-                        node.nodeType === 1 && (node.id === 'stj-editor-container' || node.classList?.contains('stj-editor-panel') || node.querySelector?.('.stj-editor-panel'))
-                    );
-                    if (hasEditor) {
-                        debouncedInitUI();
-                        break;
-                    }
-                }
-            }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-        console.log(`${LOG_PREFIX} エディタUI描画の監視を開始しました。`);
-    }
-
-    // --- SillyTavern イベントリスナー ---
-    function setupEventSourceListeners() {
-        if (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) {
-            const context = SillyTavern.getContext();
-            if (context && context.eventSource && context.eventTypes) {
-                const { eventSource, eventTypes } = context;
-
-                const safeOn = (eventType, handler) => {
-                    if (eventType && typeof eventSource.on === 'function') {
-                        eventSource.on(eventType, handler);
-                    }
-                };
-
-                safeOn(eventTypes.CHARACTER_SELECTED, debouncedInitUI);
-                safeOn(eventTypes.CHARACTER_PAGE_LOADED, debouncedInitUI);
-
-                console.log(`${LOG_PREFIX} Event listeners registered successfully`);
-            }
-        }
-    }
-
-    // --- 初期化 ---
-    function init() {
-        console.log(`${LOG_PREFIX} Stj Editor extension loaded with video support`);
-        setupEventSourceListeners();
-        setupMutationObserver();
-        debouncedInitUI();
+        setTimeout(debouncedInject, 500);
     }
 
     if (document.readyState === 'loading') {
