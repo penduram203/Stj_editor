@@ -1,6 +1,5 @@
-// 絶対パス（スラッシュ始まり）でルートを指定する
-import { getContext } from '/script.js';
-import { extension_settings, saveSettingsDebounced } from '/extensions.js';
+import { getContext } from '../../../../script.js';
+import { extension_settings, saveSettingsDebounced } from '../../../../extensions.js';
 import { 
     ALLOWED_EXTENSIONS, 
     checkImageExists, 
