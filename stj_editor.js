@@ -2,16 +2,19 @@
     const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp', 'mp4', 'webm'];
     const MODULE_NAME = 'stj_editor';
 
-    // 動画・画像のプリロード用キャッシュマップ
     const mediaCache = new Map();
 
-    // 動画ファイルかどうかを判定
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
-        return !!url.match(/\.(mp4|webm)$/i);
+        return !!url.trim().match(/\.(mp4|webm)$/i);
     }
 
-    // SillyTavern context を取得するヘルパー
+    function sanitizePath(path) {
+        if (!path) return '';
+        const cleaned = path.trim().replace(/[\r\n\t]/g, '');
+        return encodeURI(decodeURIComponent(cleaned));
+    }
+
     function getSTContext() {
         if (window.SillyTavern && typeof window.SillyTavern.getContext === 'function') {
             return window.SillyTavern.getContext();
@@ -19,11 +22,9 @@
         return null;
     }
 
-    // extensionSettings の初期化・取得ヘルパー
     function getExtensionSettings() {
         const context = getSTContext();
         if (!context || !context.extensionSettings) {
-            console.warn('[STJ Editor] SillyTavern context が取得できませんでした。');
             return {};
         }
         if (!context.extensionSettings[MODULE_NAME]) {
@@ -32,73 +33,69 @@
         return context.extensionSettings[MODULE_NAME];
     }
 
-    // 設定をサーバー側へ保存依頼するヘルパー
     function persistSettings() {
         const context = getSTContext();
         if (context && typeof context.saveSettingsDebounced === 'function') {
             context.saveSettingsDebounced();
-        } else {
-            console.warn('[STJ Editor] saveSettingsDebounced が利用できないため設定を保存できませんでした。');
         }
     }
 
-    // DOMからキャラクター名を検出する関数
     function detectCharacterNameFromDOM() {
         const nameHolder = document.querySelector('#character_name_holder');
         if (nameHolder && nameHolder.textContent) return nameHolder.textContent.trim();
         const greetingMessage = document.querySelector('.mes[mesid="0"][is_user="false"]');
-        if (greetingMessage && greetingMessage.getAttribute('ch_name')) return greetingMessage.getAttribute('ch_name');
+        if (greetingMessage && greetingMessage.getAttribute('ch_name')) return greetingMessage.getAttribute('ch_name').trim();
         return null;
     }
 
-    // メディアの高速存在確認 & キャッシュ化
     function checkMediaExists(mediaUrl) {
-        if (mediaCache.has(mediaUrl)) {
-            return Promise.resolve(mediaCache.get(mediaUrl));
+        const cleanUrl = sanitizePath(mediaUrl);
+        if (mediaCache.has(cleanUrl)) {
+            return Promise.resolve(mediaCache.get(cleanUrl));
         }
 
         return new Promise((resolve) => {
-            if (isVideoUrl(mediaUrl)) {
+            if (isVideoUrl(cleanUrl)) {
                 const video = document.createElement('video');
                 video.preload = 'metadata';
                 video.onloadedmetadata = () => {
-                    mediaCache.set(mediaUrl, true);
+                    mediaCache.set(cleanUrl, true);
                     resolve(true);
                 };
                 video.onerror = () => {
-                    mediaCache.set(mediaUrl, false);
+                    mediaCache.set(cleanUrl, false);
                     resolve(false);
                 };
-                video.src = mediaUrl;
+                video.src = cleanUrl;
             } else {
                 const img = new Image();
                 img.onload = () => {
-                    mediaCache.set(mediaUrl, true);
+                    mediaCache.set(cleanUrl, true);
                     resolve(true);
                 };
                 img.onerror = () => {
-                    mediaCache.set(mediaUrl, false);
+                    mediaCache.set(cleanUrl, false);
                     resolve(false);
                 };
-                img.src = mediaUrl;
+                img.src = cleanUrl;
             }
         });
     }
 
-    // メディアの拡張子を自動検出する関数（拡張子付きファイル名に対応）
     async function detectImageExtension(charName, imageName) {
         if (!charName || !imageName) return null;
         
-        // すでに拡張子が含まれている場合
-        if (imageName.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
-            const path = `addchara/${charName}/${imageName}`;
+        const cleanChar = charName.trim();
+        const cleanImage = imageName.trim();
+        
+        if (cleanImage.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
+            const path = `addchara/${cleanChar}/${cleanImage}`;
             const exists = await checkMediaExists(path);
-            if (exists) return ''; // 拡張子が既にあるため、追加拡張子なしを示す空文字を返す
+            if (exists) return ''; 
         }
 
-        // 拡張子が含まれていない場合のみ探査（後方互換用）
         for (const ext of ALLOWED_EXTENSIONS) {
-            const imagePath = `addchara/${charName}/${imageName}.${ext}`;
+            const imagePath = `addchara/${cleanChar}/${cleanImage}.${ext}`;
             const exists = await checkMediaExists(imagePath);
             if (exists) {
                 return ext;
@@ -107,20 +104,17 @@
         return null;
     }
 
-    // パスからファイル名をそのまま抽出（【修正】拡張子を剥ぎ取らない）
     function extractFileNameFromPath(path) {
         if (!path) return '';
-        const parts = path.split('/');
+        const parts = path.trim().split('/');
         return parts[parts.length - 1];
     }
 
-    // ファイル名文字列を配列に変換（カンマ区切り対応）
     function parseImageNames(input) {
         if (!input) return [];
         return input.split(',').map(name => name.trim()).filter(name => name.length > 0);
     }
 
-    // JSON内を再帰探索して image_display_extension を見つける
     function findImageMapInData(data) {
         if (data === null || typeof data !== 'object') return null;
         if (data.hasOwnProperty('image_display_extension')) {
@@ -138,7 +132,6 @@
         return null;
     }
 
-    // 新規ボタン作成関数
     function createExportButton() {
         const buttonContainer = document.querySelector('#rm_ch_create_block .form_create_bottom_buttons_block');
         if (!buttonContainer) return;
@@ -152,7 +145,6 @@
         createExportModal(exportButton);
     }
 
-    // セルごとの要素イベント設定（反映ボタン & 削除ボタン）
     function attachKeywordRowListeners(item, index) {
         const deleteButton = item.querySelector('.stj-delete-row');
         if (deleteButton) {
@@ -171,10 +163,8 @@
         }
     }
 
-    // 共通の反映ボタン用CSSスタイル（大きめ・黒太字）
     const applyBtnStyle = 'margin-top: 6px; padding: 6px 14px; font-size: 13px; font-weight: bold; color: #000000; background-color: #e0e0e0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; display: inline-block; width: fit-content;';
 
-    // モーダルウィンドウ作成関数
     function createExportModal(anchorButton) {
         const existingModal = document.getElementById('stj_export_modal');
         if (existingModal) existingModal.remove();
@@ -295,7 +285,6 @@
             }
         });
 
-        // デフォルト/サムネイルの変更反映ボタン設定
         modal.querySelectorAll('.stj-apply-special').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -354,7 +343,7 @@
     async function loadExistingJSONData(charName) {
         if (!charName) return;
         try {
-            const jsonPath = `addchara/${charName}/${charName}_ext.json`;
+            const jsonPath = sanitizePath(`addchara/${charName}/${charName}_ext.json`);
             const response = await fetch(jsonPath);
             if (response.ok) {
                 const data = await response.json();
@@ -416,7 +405,6 @@
         await updateImagePreview(`stj_preview_${index}`, charName, imageInput.value);
     }
 
-    // 指定プレビューボックスへ画像または動画を表示（完全ファイルパス優先版）
     async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
         const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
@@ -439,8 +427,9 @@
         const ext = await detectImageExtension(charName, firstName);
         
         if (ext !== null) {
-            const fullPath = ext ? `addchara/${charName}/${firstName}.${ext}` : `addchara/${charName}/${firstName}`;
-            
+            const rawPath = ext ? `addchara/${charName}/${firstName}.${ext}` : `addchara/${charName}/${firstName}`;
+            const fullPath = sanitizePath(rawPath);
+
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
                 mediaHtml = `
@@ -462,7 +451,6 @@
                 }
             }
 
-            // 複数指定時のナビゲーションボタン & インデックス表示
             if (imageNames.length > 1) {
                 const leftButton = document.createElement('button');
                 leftButton.innerHTML = '←';
@@ -572,10 +560,9 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             showCustomAlert('JSONファイルを出力しました');
-            console.log(`✅ ${charName}_ext.json を出力しました`, exportData);
         } catch (e) {
             console.error('[STJ Editor] JSON出力に失敗しました:', e);
-            alert('JSON出力に失敗しました。詳細はコンソールを確認してください。');
+            alert('JSON出力に失敗しました。詳細をコンソールで確認してください。');
         }
     }
 
@@ -705,8 +692,6 @@
             if (eventTypes.APP_READY) {
                 eventSource.on(eventTypes.APP_READY, createExportButton);
             }
-        } else {
-            console.warn('[STJ Editor] eventSource or eventTypes not found in context.');
         }
     }
 
