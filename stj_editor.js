@@ -85,34 +85,33 @@
         });
     }
 
+    // メディアの拡張子を自動検出する関数
     async function detectImageExtension(charName, imageName) {
-        if (!imageName || typeof imageName !== 'string' || !imageName.trim()) return null;
-        const cleanName = imageName.trim();
-
-        // 既に拡張子（.mp4, .pngなど）が含まれているか判定
-        if (cleanName.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
-            const fullPath = `addchara/${charName}/${cleanName}`;
-            const exists = await checkMediaExists(fullPath);
-            // 存在すれば「追加の拡張子は不要」として空文字を返す
-            return exists ? '' : null; 
+        if (!charName || !imageName) return null;
+        
+        if (imageName.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
+            const path = `addchara/${charName}/${imageName}`;
+            const exists = await checkMediaExists(path);
+            if (exists) return '';
         }
 
-        // （拡張子が指定されていない旧データ向けのループ処理）
         for (const ext of ALLOWED_EXTENSIONS) {
-            const fullPath = `addchara/${charName}/${cleanName}.${ext}`;
-            const exists = await checkMediaExists(fullPath);
-            if (exists) return ext;
+            const imagePath = `addchara/${charName}/${imageName}.${ext}`;
+            const exists = await checkMediaExists(imagePath);
+            if (exists) {
+                return ext;
+            }
         }
         return null;
     }
 
-    // パスからファイル名（拡張子込み）を安全に抽出する関数
+    // 拡張子を含むパスからファイル名（拡張子なし）を抽出
     function extractFileNameFromPath(path) {
-        // 空文字や無効なパスの場合は空文字列を返して不正なパス生成を防ぐ
-        if (!path || typeof path !== 'string' || !path.trim()) return '';
+        if (!path) return '';
         const parts = path.split('/');
-        // 末尾の拡張子を削除せず、そのまま返す（例: "defa.mp4"）
-        return parts[parts.length - 1]; 
+        const fileNameWithExt = parts[parts.length - 1];
+        const fileName = fileNameWithExt.split('.')[0];
+        return fileName;
     }
 
     // ファイル名文字列を配列に変換（カンマ区切り対応）
@@ -371,12 +370,10 @@
     }
 
     function populateFormFromImageMap(imageMap) {
-        // JSONのパス配列から、カンマ区切りのファイル名文字列を生成（フォーム表示用）
-        function toInputValue(pathArray) {
-            if (!Array.isArray(pathArray)) return '';
-            // extractFileNameFromPath が拡張子を維持するようになったため、そのままmapして結合する
-            return pathArray.map(p => extractFileNameFromPath(p)).filter(Boolean).join(', ');
-        }
+        const toInputValue = (val) => {
+            const arr = Array.isArray(val) ? val : [val];
+            return arr.map(p => extractFileNameFromPath(p)).join(',');
+        };
 
         if (imageMap.default !== undefined) {
             document.getElementById('stj_default_image').value = toInputValue(imageMap.default);
@@ -526,27 +523,7 @@
     }
 
     function buildImageMapFromForm(charName) {
-        async function buildImageMapFromForm(charName) {
-            const toPaths = async (raw) => {
-            const names = parseImageNames(raw); // （既存のパース処理）
-            const results = [];
-            for (const name of names) {
-                const baseName = extractFileNameFromPath(name);
-                if (!baseName) continue; // 空名はスキップ
-
-                let ext = '';
-                // 拡張子が含まれていない場合のみ補完処理を呼ぶ
-                if (!baseName.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
-                    ext = await detectImageExtension(charName, baseName) || '';
-                }
-            
-                // 補完された拡張子があれば結合し、なければ元の baseName（拡張子込み）をそのまま使う
-                const fullFileName = ext ? `${baseName}.${ext}` : baseName;
-                results.push(`addchara/${charName}/${fullFileName}`);
-            }
-            return results;
-        };
-        
+        const toPaths = (raw) => parseImageNames(raw).map(name => `addchara/${charName}/${extractFileNameFromPath(name)}`);
         const imageMap = {};
 
         const defaultPaths = toPaths(document.getElementById('stj_default_image').value);
