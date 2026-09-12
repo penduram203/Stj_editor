@@ -85,33 +85,24 @@
         });
     }
 
-    // メディアの拡張子を自動検出する関数
-    async function detectImageExtension(charName, imageName) {
-        if (!charName || !imageName) return null;
+    // 拡張子付きのファイル名を受け取り、存在確認だけを行う関数（総当たり廃止）
+    async function detectImageExtension(charName, fileNameWithExt) {
+        if (!charName || !fileNameWithExt) return null;
         
-        if (imageName.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
-            const path = `addchara/${charName}/${imageName}`;
-            const exists = await checkMediaExists(path);
-            if (exists) return '';
-        }
+        // 既にフルパス、あるいはファイル名として渡されたものをそのまま構築
+        const path = fileNameWithExt.startsWith('addchara/') 
+            ? fileNameWithExt 
+            : `addchara/${charName}/${fileNameWithExt}`;
 
-        for (const ext of ALLOWED_EXTENSIONS) {
-            const imagePath = `addchara/${charName}/${imageName}.${ext}`;
-            const exists = await checkMediaExists(imagePath);
-            if (exists) {
-                return ext;
-            }
-        }
-        return null;
+        const exists = await checkMediaExists(path);
+        return exists ? path : null;
     }
 
-    // 拡張子を含むパスからファイル名（拡張子なし）を抽出
+    // 拡張子を含むパスからファイル名（拡張子込み）をそのまま抽出
     function extractFileNameFromPath(path) {
         if (!path) return '';
         const parts = path.split('/');
-        const fileNameWithExt = parts[parts.length - 1];
-        const fileName = fileNameWithExt.split('.')[0];
-        return fileName;
+        return parts[parts.length - 1]; // 拡張子を保持したまま返す
     }
 
     // ファイル名文字列を配列に変換（カンマ区切り対応）
@@ -435,11 +426,11 @@
         if (currentIndex >= imageNames.length) currentIndex = 0;
         previewEl.dataset.currentIndex = currentIndex;
 
-        const firstName = extractFileNameFromPath(imageNames[currentIndex]);
-        const ext = await detectImageExtension(charName, firstName);
+        const fileName = extractFileNameFromPath(imageNames[currentIndex]);
+        // detectImageExtension がそのまま有効なフルパス（またはnull）を返すように変更したため、それを直接受け取る
+        const fullPath = await detectImageExtension(charName, fileName);
         
-        if (ext !== null) {
-            const fullPath = ext ? `addchara/${charName}/${firstName}.${ext}` : `addchara/${charName}/${firstName}`;
+        if (fullPath !== null) {
             
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
