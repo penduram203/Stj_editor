@@ -441,7 +441,7 @@
                     </video>`;
             } else {
                 mediaHtml = `
-                    <img src="${fullPath}" alt="${firstName}" 
+                    <img src="${fullPath}" alt="${fileName}" 
                          style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
             }
 
