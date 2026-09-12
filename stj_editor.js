@@ -85,17 +85,18 @@
         });
     }
 
-    // メディアの拡張子を自動検出する関数
+    // メディアの拡張子を自動検出する関数（拡張子付きファイル名に対応）
     async function detectImageExtension(charName, imageName) {
         if (!charName || !imageName) return null;
         
-        // 既に拡張子が含まれている場合はそのままで存在確認
+        // すでに拡張子が含まれている場合
         if (imageName.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
             const path = `addchara/${charName}/${imageName}`;
             const exists = await checkMediaExists(path);
-            if (exists) return '';
+            if (exists) return ''; // 拡張子が既にあるため、追加拡張子なしを示す空文字を返す
         }
 
+        // 拡張子が含まれていない場合のみ探査（後方互換用）
         for (const ext of ALLOWED_EXTENSIONS) {
             const imagePath = `addchara/${charName}/${imageName}.${ext}`;
             const exists = await checkMediaExists(imagePath);
@@ -106,13 +107,11 @@
         return null;
     }
 
-    // 拡張子を含むパスからファイル名（拡張子なし）を抽出（修正：末尾の拡張子のみを正確に削除）
+    // パスからファイル名をそのまま抽出（【修正】拡張子を剥ぎ取らない）
     function extractFileNameFromPath(path) {
         if (!path) return '';
         const parts = path.split('/');
-        const fileNameWithExt = parts[parts.length - 1];
-        // 最初のドットで切るのではなく、最後のドット＋拡張子部分のみ削除する
-        return fileNameWithExt.replace(/\.[^/.]+$/, '');
+        return parts[parts.length - 1];
     }
 
     // ファイル名文字列を配列に変換（カンマ区切り対応）
@@ -188,7 +187,7 @@
         modal.innerHTML = `
             <div class="stj-header" style="margin-bottom: 15px;">
                 <strong id="stj_char_name_display" style="font-size: 24px; font-weight: bold; color: white; text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);"></strong>
-                <div style="color: #ccc; font-size: 12px; margin-top: 5px;">※複数ファイルはカンマ区切りで入力（例: image1,video1,image2）</div>
+                <div style="color: #ccc; font-size: 12px; margin-top: 5px;">※複数ファイルはカンマ区切りで入力（例: image1.png,video1.mp4,image2.jpg）</div>
             </div>
             <div class="stj-special-container">
                 <div class="stj-special-item">
@@ -200,7 +199,7 @@
                     <div class="stj-special-inputs">
                         <div class="stj-input-group">
                             <label for="stj_default_image">ファイル名</label>
-                            <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                            <input type="text" id="stj_default_image" value="defa.mp4" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                             <div>
                                 <button type="button" class="stj-apply-special" data-target="default" style="${applyBtnStyle}">反映</button>
                             </div>
@@ -216,7 +215,7 @@
                     <div class="stj-special-inputs">
                         <div class="stj-input-group">
                             <label for="stj_thumbnail_image">ファイル名</label>
-                            <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                            <input type="text" id="stj_thumbnail_image" value="thum.png" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                             <div>
                                 <button type="button" class="stj-apply-special" data-target="thumbnail" style="${applyBtnStyle}">反映</button>
                             </div>
@@ -282,9 +281,9 @@
             e.stopPropagation();
             modal.style.display = 'none';
         });
-        document.getElementById('stj_export_json').addEventListener('click', async function(e) {
+        document.getElementById('stj_export_json').addEventListener('click', function(e) {
             e.stopPropagation();
-            await exportJSON();
+            exportJSON();
         });
         document.getElementById('stj_save_data').addEventListener('click', function(e) {
             e.stopPropagation();
@@ -417,7 +416,7 @@
         await updateImagePreview(`stj_preview_${index}`, charName, imageInput.value);
     }
 
-    // 指定プレビューボックスへ画像または動画を表示（高速再生・キャッシュ最適化版）
+    // 指定プレビューボックスへ画像または動画を表示（完全ファイルパス優先版）
     async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
         const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
@@ -444,7 +443,6 @@
             
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
-                // preload="auto" と playsinline で即時再生・高速化
                 mediaHtml = `
                     <video src="${fullPath}" autoplay loop muted playsinline preload="auto"
                            style="width: 100%; height: 100%; object-fit: contain; display: block; background-color: rgba(0,0,0,0.4);">
@@ -523,59 +521,42 @@
         }
     }
 
-    // JSON出力用のパスを正確に生成する非同期関数（拡張子の重複防止と自動判定）
-    async function buildImageMapFromForm(charName) {
-        const toPaths = async (raw) => {
-            const names = parseImageNames(raw);
-            const results = [];
-            for (const name of names) {
-                const baseName = extractFileNameFromPath(name);
-                // 既に拡張子が含まれているか確認
-                let ext = '';
-                if (!name.match(/\.(png|jpg|jpeg|webp|gif|avif|bmp|mp4|webm)$/i)) {
-                    ext = await detectImageExtension(charName, baseName) || '';
-                }
-                const fullFileName = ext ? `${baseName}.${ext}` : name;
-                results.push(`addchara/${charName}/${fullFileName}`);
-            }
-            return results;
-        };
-
+    function buildImageMapFromForm(charName) {
+        const toPaths = (raw) => parseImageNames(raw).map(name => `addchara/${charName}/${extractFileNameFromPath(name)}`);
         const imageMap = {};
 
-        const defaultPaths = await toPaths(document.getElementById('stj_default_image').value);
+        const defaultPaths = toPaths(document.getElementById('stj_default_image').value);
         if (defaultPaths.length > 0) {
             imageMap.default = defaultPaths.length === 1 ? defaultPaths[0] : defaultPaths;
         }
 
-        const thumbnailPaths = await toPaths(document.getElementById('stj_thumbnail_image').value);
+        const thumbnailPaths = toPaths(document.getElementById('stj_thumbnail_image').value);
         if (thumbnailPaths.length > 0) {
             imageMap.thumbnail = thumbnailPaths.length === 1 ? thumbnailPaths[0] : thumbnailPaths;
         }
 
-        const keywordItems = document.querySelectorAll('.stj-keyword-item');
-        for (const item of keywordItems) {
+        document.querySelectorAll('.stj-keyword-item').forEach(item => {
             const keywordInput = item.querySelector('.stj-keyword-input');
             const imageInput = item.querySelector('.stj-image-input');
-            if (!keywordInput || !imageInput) continue;
+            if (!keywordInput || !imageInput) return;
             const keyword = keywordInput.value.trim();
-            if (!keyword) continue;
-            const paths = await toPaths(imageInput.value);
-            if (paths.length === 0) continue;
+            if (!keyword) return;
+            const paths = toPaths(imageInput.value);
+            if (paths.length === 0) return;
             imageMap[keyword] = paths.length === 1 ? paths[0] : paths;
-        }
+        });
 
         return imageMap;
     }
 
-    async function exportJSON() {
+    function exportJSON() {
         const charName = document.getElementById('stj_char_name_display').textContent;
         if (!charName) {
             alert('キャラクター名が設定されていません');
             return;
         }
 
-        const imageMap = await buildImageMapFromForm(charName);
+        const imageMap = buildImageMapFromForm(charName);
         const exportData = {
             image_display_extension: imageMap
         };
