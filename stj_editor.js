@@ -150,6 +150,7 @@
             deleteButton.addEventListener('click', function(e) {
                 e.stopPropagation();
                 item.remove();
+                runLiveTest(); // 行削除時にもテストを再実行
             });
         }
 
@@ -160,6 +161,12 @@
                 updateSinglePreview(index);
             });
         }
+
+        // キーワードや画像入力の変更時にもテスト判定を更新
+        const inputs = item.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', runLiveTest);
+        });
     }
 
     // 共通の反映ボタン用CSSスタイル（大きめ・黒太字）
@@ -180,6 +187,18 @@
                 <strong id="stj_char_name_display" style="font-size: 24px; font-weight: bold; color: white; text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);"></strong>
                 <div style="color: #ccc; font-size: 12px; margin-top: 5px;">※複数ファイルはカンマ区切りで入力（例: image1,video1,image2）</div>
             </div>
+
+            <!-- リアルタイムマッチングテスト用エリア -->
+            <div id="stj_test_section" style="background: rgba(0,0,0,0.4); border: 1px solid #555; padding: 10px; margin-bottom: 15px; border-radius: 6px;">
+                <label style="font-weight: bold; color: #64b5f6; display: block; margin-bottom: 5px;">
+                    🔍 リアルタイムキーワード反応テスト
+                </label>
+                <textarea id="stj_test_input" placeholder="試しに文章を入力してください（例：笑顔で挨拶する）..." style="width: 100%; height: 50px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea>
+                <div id="stj_test_result" style="margin-top: 6px; font-size: 13px; font-weight: bold; color: #aed581;">
+                    判定結果: <span style="color: #aaa; font-weight: normal;">文章を入力するとヒットするキーワードが表示されます</span>
+                </div>
+            </div>
+
             <div class="stj-special-container">
                 <div class="stj-special-item">
                     <div class="stj-special-preview">
@@ -251,6 +270,13 @@
         document.body.appendChild(modal);
 
         modal.addEventListener('click', function(e) { e.stopPropagation(); });
+
+        // テスト用入力エリアのイベント設定
+        const testInput = document.getElementById('stj_test_input');
+        if (testInput) {
+            testInput.addEventListener('input', runLiveTest);
+        }
+
         document.getElementById('stj_add_keyword').addEventListener('click', function(e) {
             e.stopPropagation();
             addKeywordRow(modal);
@@ -267,6 +293,7 @@
             await loadExistingJSONData(charName);
             loadSavedData(charName);
             setupPreviewListeners();
+            runLiveTest(); // モーダルオープン時にもテスト実行
         });
         document.getElementById('stj_cancel_export').addEventListener('click', function(e) {
             e.stopPropagation();
@@ -306,6 +333,62 @@
         }
     }
 
+    // リアルタイムマッチングテストの判定関数
+    function runLiveTest() {
+        const testInput = document.getElementById('stj_test_input');
+        const testResult = document.getElementById('stj_test_result');
+        if (!testInput || !testResult) return;
+
+        const text = testInput.value.trim();
+        const items = document.querySelectorAll('.stj-keyword-item');
+
+        // ハイライトのリセット
+        items.forEach(item => {
+            item.style.border = '';
+            item.style.backgroundColor = '';
+        });
+
+        if (!text) {
+            testResult.innerHTML = '判定結果: <span style="color: #aaa; font-weight: normal;">文章を入力するとヒットするキーワードが表示されます</span>';
+            return;
+        }
+
+        let matchedKeyword = null;
+        let matchedImageName = '';
+        let matchedElement = null;
+
+        // キーワードのマッチング判定（先に登録されている項目、またはキーワード長の長いものを優先）
+        items.forEach(item => {
+            const kwInput = item.querySelector('.stj-keyword-input');
+            const imgInput = item.querySelector('.stj-image-input');
+            if (!kwInput || !imgInput) return;
+
+            const kw = kwInput.value.trim();
+            if (!kw) return;
+
+            // 簡易的な部分一致判定（正規表現化やパイプ区切り|にも拡張可能）
+            const keywords = kw.split('|').map(k => k.trim());
+            const isMatch = keywords.some(k => k && text.includes(k));
+
+            if (isMatch && !matchedKeyword) {
+                matchedKeyword = kw;
+                matchedImageName = imgInput.value.trim();
+                matchedElement = item;
+            }
+        });
+
+        if (matchedKeyword) {
+            testResult.innerHTML = `判定結果: <span style="color: #64b5f6; font-size: 15px;">「${matchedKeyword}」</span> にマッチしました！ (ファイル: ${matchedImageName || '未指定'})`;
+            if (matchedElement) {
+                matchedElement.style.border = '2px solid #64b5f6';
+                matchedElement.style.backgroundColor = 'rgba(100, 181, 246, 0.15)';
+            }
+        } else {
+            const defaultImg = document.getElementById('stj_default_image')?.value.trim();
+            testResult.innerHTML = `判定結果: <span style="color: #ffb74d;">一致するキーワードがありません（デフォルト「${defaultImg || 'defa'}」が適用されます）</span>`;
+        }
+    }
+
     function addKeywordRow(modal) {
         const container = modal.querySelector('#stj_keywords_container');
         const itemCount = container.querySelectorAll('.stj-keyword-item').length;
@@ -340,6 +423,7 @@
 
         modal.scrollTop = modal.scrollHeight;
         setTimeout(() => updateSinglePreview(itemCount), 100);
+        runLiveTest();
     }
 
     async function loadExistingJSONData(charName) {
@@ -427,14 +511,11 @@
         previewEl.dataset.currentIndex = currentIndex;
 
         const fileName = extractFileNameFromPath(imageNames[currentIndex]);
-        // detectImageExtension がそのまま有効なフルパス（またはnull）を返すように変更したため、それを直接受け取る
         const fullPath = await detectImageExtension(charName, fileName);
         
         if (fullPath !== null) {
-            
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
-                // preload="auto" と playsinline で即時再生・高速化
                 mediaHtml = `
                     <video src="${fullPath}" autoplay loop muted playsinline preload="auto"
                            style="width: 100%; height: 100%; object-fit: contain; display: block; background-color: rgba(0,0,0,0.4);">
