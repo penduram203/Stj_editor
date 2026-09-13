@@ -129,6 +129,153 @@
         return null;
     }
 
+    // --- 条件評価エンジン（カッコ / NOT / AND / OR 対応） ---
+
+    // 単語形式の演算子を記号形式へ正規化（and→+, or→,, not→!）
+    function normalizeConditionExpression(expr) {
+        if (!expr || typeof expr !== 'string') return '';
+        return expr
+            .replace(/\band\b/gi, '+')
+            .replace(/\bor\b/gi, ',')
+            .replace(/\bnot\b/gi, '!');
+    }
+
+    // トークナイザ：カッコ・否定・AND・OR・キーワードに分解
+    function tokenizeCondition(expr) {
+        const tokens = [];
+        let i = 0;
+        const len = expr.length;
+        while (i < len) {
+            const ch = expr[i];
+            if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
+                i++;
+                continue;
+            }
+            if (ch === '(' || ch === ')' || ch === '!' || ch === '+' || ch === ',') {
+                tokens.push({ type: ch, value: ch });
+                i++;
+                continue;
+            }
+            // キーワード：特殊文字に当たるまで読み進める（スペース許容）
+            let j = i;
+            while (j < len && !'()!+,'.includes(expr[j])) {
+                j++;
+            }
+            const raw = expr.slice(i, j).trim();
+            if (raw) {
+                tokens.push({ type: 'KEYWORD', value: raw });
+            }
+            i = j > i ? j : i + 1;
+        }
+        return tokens;
+    }
+
+    // 再帰下降パーサ（OR < AND < NOT < PRIMARY の優先順位）
+    function parseConditionTokens(tokens) {
+        let pos = 0;
+        const peek = () => tokens[pos];
+        const consume = (type) => {
+            const t = tokens[pos];
+            if (t && t.type === type) { pos++; return t; }
+            return null;
+        };
+
+        function parseOr() {
+            let node = parseAnd();
+            while (peek() && peek().type === ',') {
+                consume(',');
+                const right = parseAnd();
+                node = { type: 'OR', left: node, right };
+            }
+            return node;
+        }
+
+        function parseAnd() {
+            let node = parseUnary();
+            while (peek() && peek().type === '+') {
+                consume('+');
+                const right = parseUnary();
+                node = { type: 'AND', left: node, right };
+            }
+            return node;
+        }
+
+        function parseUnary() {
+            if (peek() && peek().type === '!') {
+                consume('!');
+                const operand = parseUnary();
+                return { type: 'NOT', operand };
+            }
+            return parsePrimary();
+        }
+
+        function parsePrimary() {
+            const t = peek();
+            if (!t) return null;
+            if (t.type === '(') {
+                consume('(');
+                const inner = parseOr();
+                consume(')'); // 閉じカッコが無くても継続
+                return inner;
+            }
+            if (t.type === 'KEYWORD') {
+                consume('KEYWORD');
+                return { type: 'KEYWORD', value: t.value };
+            }
+            return null;
+        }
+
+        return parseOr();
+    }
+
+    // AST評価
+    function evaluateConditionNode(node, lowerText) {
+        if (!node) return false;
+        switch (node.type) {
+            case 'KEYWORD':
+                return lowerText.includes(node.value.toLowerCase());
+            case 'AND':
+                return evaluateConditionNode(node.left, lowerText)
+                    && evaluateConditionNode(node.right, lowerText);
+            case 'OR':
+                return evaluateConditionNode(node.left, lowerText)
+                    || evaluateConditionNode(node.right, lowerText);
+            case 'NOT':
+                return !evaluateConditionNode(node.operand, lowerText);
+            default:
+                return false;
+        }
+    }
+
+    function evaluateCondition(condStr, text) {
+        if (!condStr || !text) return false;
+        try {
+            const normalized = normalizeConditionExpression(condStr);
+            const tokens = tokenizeCondition(normalized);
+            if (tokens.length === 0) return false;
+            const ast = parseConditionTokens(tokens);
+            return evaluateConditionNode(ast, text.toLowerCase());
+        } catch (error) {
+            console.error(`❌ 条件評価エラー "${condStr}":`, error);
+            return false;
+        }
+    }
+
+    // 複雑度スコア計算（実際の表示ロジックと一致させるためのソートキー）
+    function calcConditionComplexity(condition) {
+        if (!condition || typeof condition !== 'string') return 0;
+        return (
+            (condition.match(/\band\b/gi) || []).length * 10 +
+            (condition.match(/\bor\b/gi)  || []).length * 5  +
+            (condition.match(/\+/g)       || []).length * 8  +
+            (condition.match(/,/g)        || []).length * 4  +
+            (condition.match(/!/g)        || []).length * 6  +
+            (condition.match(/\(/g)       || []).length * 3  +
+            (condition.match(/\)/g)       || []).length * 3  +
+            condition.length
+        );
+    }
+
     // 新規ボタン作成関数
     function createExportButton() {
         const buttonContainer = document.querySelector('#rm_ch_create_block .form_create_bottom_buttons_block');
@@ -333,7 +480,7 @@
         }
     }
 
-    // リアルタイムマッチングテストの判定関数
+    // リアルタイムマッチングテストの判定関数（条件評価エンジン統合版）
     function runLiveTest() {
         const testInput = document.getElementById('stj_test_input');
         const testResult = document.getElementById('stj_test_result');
@@ -353,36 +500,40 @@
             return;
         }
 
-        let matchedKeyword = null;
-        let matchedImageName = '';
-        let matchedElement = null;
-
-        // キーワードのマッチング判定（先に登録されている項目、またはキーワード長の長いものを優先）
+        // 実際の表示ロジックと一致させるため複雑度でソート
+        const candidates = [];
         items.forEach(item => {
             const kwInput = item.querySelector('.stj-keyword-input');
             const imgInput = item.querySelector('.stj-image-input');
             if (!kwInput || !imgInput) return;
-
             const kw = kwInput.value.trim();
             if (!kw) return;
 
-            // 簡易的な部分一致判定（正規表現化やパイプ区切り|にも拡張可能）
-            const keywords = kw.split('|').map(k => k.trim());
-            const isMatch = keywords.some(k => k && text.includes(k));
-
-            if (isMatch && !matchedKeyword) {
-                matchedKeyword = kw;
-                matchedImageName = imgInput.value.trim();
-                matchedElement = item;
-            }
+            candidates.push({
+                element: item,
+                keyword: kw,
+                imageName: imgInput.value.trim(),
+                complexity: calcConditionComplexity(kw)
+            });
         });
+        candidates.sort((a, b) => b.complexity - a.complexity);
 
-        if (matchedKeyword) {
-            testResult.innerHTML = `判定結果: <span style="color: #64b5f6; font-size: 15px;">「${matchedKeyword}」</span> にマッチしました！ (ファイル: ${matchedImageName || '未指定'})`;
-            if (matchedElement) {
-                matchedElement.style.border = '2px solid #64b5f6';
-                matchedElement.style.backgroundColor = 'rgba(100, 181, 246, 0.15)';
+        let matched = null;
+        for (const c of candidates) {
+            try {
+                if (evaluateCondition(c.keyword, text)) {
+                    matched = c;
+                    break;
+                }
+            } catch (e) {
+                console.error(`条件評価エラー "${c.keyword}":`, e);
             }
+        }
+
+        if (matched) {
+            testResult.innerHTML = `判定結果: <span style="color: #64b5f6; font-size: 15px;">「${matched.keyword}」</span> にマッチしました！ (ファイル: ${matched.imageName || '未指定'})`;
+            matched.element.style.border = '2px solid #64b5f6';
+            matched.element.style.backgroundColor = 'rgba(100, 181, 246, 0.15)';
         } else {
             const defaultImg = document.getElementById('stj_default_image')?.value.trim();
             testResult.innerHTML = `判定結果: <span style="color: #ffb74d;">一致するキーワードがありません（デフォルト「${defaultImg || 'defa'}」が適用されます）</span>`;
