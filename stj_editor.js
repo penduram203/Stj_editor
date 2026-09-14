@@ -296,11 +296,12 @@
     function openExportModal() {
         if (!stjModalEl) return;
 
+        // ★ インラインスタイルを明示的に設定（left: 0vw / width: 85vw）
         stjModalEl.style.display = 'block';
         stjModalEl.style.position = 'fixed';
-        stjModalEl.style.top = '0';
-        stjModalEl.style.left = '10vw';
-        stjModalEl.style.width = '80vw';
+        stjModalEl.style.top = '0px';
+        stjModalEl.style.left = '0vw';
+        stjModalEl.style.width = '85vw';
         stjModalEl.style.height = '100vh';
         stjModalEl.style.zIndex = '10001';
         stjModalEl.scrollTop = 0;
@@ -423,7 +424,6 @@
                 </div>
             </div>
 
-            <!-- 削除確認ダイアログ -->
             <div id="stj_confirm_dialog">
                 <div class="stj-confirm-box">
                     <div class="stj-confirm-message">本当に削除しますか？</div>
@@ -438,7 +438,6 @@
         stjModalEl = modal;
         confirmDialogEl = modal.querySelector('#stj_confirm_dialog');
 
-        // 確認ダイアログのボタン
         if (confirmDialogEl) {
             confirmDialogEl.addEventListener('click', (e) => e.stopPropagation());
             confirmDialogEl.querySelector('.stj-confirm-yes').addEventListener('click', (e) => {
@@ -526,7 +525,6 @@
     }
 
     function attachKeywordRowListeners(item, index) {
-        // ★ プレビュークリックで編集モードに入る
         const previewEl = item.querySelector('.stj-image-preview');
         if (previewEl) {
             previewEl.addEventListener('click', function(e) {
@@ -537,7 +535,6 @@
             });
         }
 
-        // ★ ❌ボタン：確認ダイアログを経てから削除
         const deleteButton = item.querySelector('.stj-delete-row');
         if (deleteButton) {
             deleteButton.addEventListener('click', function(e) {
@@ -549,7 +546,6 @@
             });
         }
 
-        // ★ 反映ボタン：プレビュー更新後、編集モードを終了
         const applyButton = item.querySelector('.stj-apply-row');
         if (applyButton) {
             applyButton.addEventListener('click', function(e) {
@@ -626,7 +622,6 @@
         const container = modal.querySelector('#stj_keywords_container');
         const itemCount = container.querySelectorAll('.stj-keyword-item').length;
         const newItem = document.createElement('div');
-        // ★ 新規追加時は編集モードで出現
         newItem.className = 'stj-keyword-item editing';
         newItem.innerHTML = `
             <div class="stj-image-preview" id="stj_preview_${itemCount}" style="position: relative;">
@@ -967,7 +962,6 @@
         }
     }
 
-    // ★ 読み込み時は表示モード（プレビューのみ）、.editing なし
     function addKeywordRowWithData(container, index, data) {
         const newItem = document.createElement('div');
         newItem.className = 'stj-keyword-item';
