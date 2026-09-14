@@ -90,28 +90,30 @@
   color: white;
 }
 
-/* ===== キーワードセル（2列グリッド） ===== */
+/* ===== キーワードセル（3列グリッド） ===== */
 .stj-keyword-item {
   display: flex;
-  padding: 15px;
+  padding: 10px 8px;
   background-color: #1a202c;
   border-radius: 8px;
   width: 100%;
-  gap: 15px;
+  gap: 6px;
   align-items: center;
   min-height: 230px;
   box-sizing: border-box;
 }
 .stj-grid-container {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 .stj-keyword-width {
   flex: 1;
+  min-width: 0;
 }
 .stj-image-width {
   flex: 1;
+  min-width: 0;
 }
 .stj-extension-width {
   flex: 1;
@@ -221,24 +223,25 @@
 }
 .stj-input-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   margin-bottom: 0;
+  min-width: 0;
 }
 
-/* ===== デフォルト/サムネイル（2列グリッド） ===== */
+/* ===== デフォルト/サムネイル（3列グリッド） ===== */
 .stj-special-container {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   margin-bottom: 25px;
 }
 .stj-special-item {
   display: flex;
-  padding: 15px;
+  padding: 10px 8px;
   background-color: #1a202c;
   border-radius: 8px;
-  gap: 15px;
+  gap: 6px;
   align-items: center;
   min-height: 230px;
   box-sizing: border-box;
@@ -291,8 +294,8 @@
 .stj-keyword-input, .stj-image-input {
   width: 100%;
   box-sizing: border-box;
-  font-size: 14px;
-  padding: 10px;
+  font-size: 13px;
+  padding: 8px;
 }
 
 /* ===== プレビュー内ナビゲーションボタン ===== */
@@ -304,10 +307,31 @@
   z-index: 10;
 }
 
+/* ===== ブレークポイント ===== */
 @media (max-width: 1400px) {
   #stj_export_modal { left: 5vw; width: 90vw; }
 }
-@media (max-width: 1200px) {
+@media (max-width: 1300px) {
+  /* 2列レイアウトに切替 */
+  .stj-special-container,
+  .stj-grid-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stj-keyword-item,
+  .stj-special-item {
+    padding: 15px;
+    gap: 15px;
+  }
+  .stj-input-row {
+    gap: 8px;
+  }
+  .stj-keyword-input, .stj-image-input {
+    font-size: 14px;
+    padding: 10px;
+  }
+}
+@media (max-width: 1000px) {
+  /* 1列レイアウトに切替 */
   .stj-special-container,
   .stj-grid-container {
     grid-template-columns: 1fr;
