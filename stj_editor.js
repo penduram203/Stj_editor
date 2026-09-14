@@ -335,8 +335,8 @@
                 <div style="color: #ccc; font-size: 12px; margin-top: 5px;">※複数ファイルはカンマ区切りで入力（例: image1,video1,image2）</div>
             </div>
 
-            <!-- リアルタイムマッチングテスト用エリア -->
-            <div id="stj_test_section" style="background: rgba(0,0,0,0.4); border: 1px solid #555; padding: 10px; margin-bottom: 15px; border-radius: 6px;">
+            <!-- リアルタイムマッチングテスト用エリア（スクロール追従） -->
+            <div id="stj_test_section" style="position: sticky; top: 0; z-index: 100; background: #1e1e1e; border: 1px solid #555; padding: 10px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.6);">
                 <label style="font-weight: bold; color: #64b5f6; display: block; margin-bottom: 5px;">
                     🔍 リアルタイムキーワード反応テスト
                 </label>
