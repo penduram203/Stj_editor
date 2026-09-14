@@ -297,6 +297,7 @@
   border-color: #ff8c00;
   border-style: solid;
   box-shadow: 0 0 16px rgba(255, 140, 0, 0.85), inset 0 0 16px rgba(255, 140, 0, 0.4);
+  opacity: 0.35;   /* ★ 元セルを半透明化 */
 }
 
 /* ===== ドロップ先のセル：赤枠＋赤グロー ===== */
@@ -573,7 +574,7 @@
     inset 0 0 12px rgba(255, 140, 0, 0.35);
   overflow: hidden;
   background-color: #1a202c;
-  opacity: 0.9;
+  opacity: 0.5;
   /* 位置は JS で left/top を上書き */
   transition: none;
   will-change: transform;
