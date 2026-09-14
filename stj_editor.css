@@ -65,6 +65,7 @@
   cursor: pointer;
 }
 
+/* ===== ボタングループ ===== */
 .stj-button-group {
   display: flex;
   justify-content: space-between;
@@ -78,11 +79,19 @@
   cursor: pointer;
   font-weight: bold;
   font-size: 14px;
+  margin-right: 8px;
+}
+.stj-button-group button:last-child {
+  margin-right: 0;
+}
+.stj-button-group > div {
+  display: flex;
+  align-items: center;
 }
 #stj_export_json {
   background-color: #48bb78;
   color: white;
-  margin-left: 10px;
+  margin-left: 0 !important;
 }
 #stj_cancel_export {
   background-color: #e53e3e;
@@ -91,6 +100,34 @@
 #stj_add_keyword {
   background-color: #4299e1;
   color: white;
+}
+#stj_bulk_delete {
+  background-color: #dd6b20;
+  color: white;
+}
+#stj_bulk_delete:hover {
+  background-color: #c05621;
+}
+#stj_delete_cancel {
+  background-color: #4a5568;
+  color: white;
+}
+#stj_delete_cancel:hover {
+  background-color: #2d3748;
+}
+#stj_delete_execute {
+  background-color: #e53e3e;
+  color: white;
+}
+#stj_delete_execute:hover {
+  background-color: #c53030;
+}
+
+/* ===== 無効化されたボタン ===== */
+#stj_export_modal button:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
 }
 
 /* ===== キーワードセル ===== */
@@ -107,13 +144,11 @@
   align-items: center;
   overflow: hidden;
   counter-increment: stj-cell-num;
-  /* ★ ドラッグ中のテキスト選択を抑止 */
   user-select: none;
   -moz-user-select: none;
   -webkit-user-select: none;
 }
 
-/* ★ 各セルの番号：8方向 text-shadow 方式（全ブラウザ安定、白い膜なし） */
 .stj-keyword-item::after {
   content: counter(stj-cell-num);
   display: block;
@@ -192,16 +227,10 @@
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  margin-right: 10px;
   font-size: 14px;
 }
 #stj_save_data:hover {
   background-color: #3182ce;
-}
-
-.stj-button-group > div {
-  display: flex;
-  align-items: center;
 }
 
 #stj_char_name_display {
@@ -229,7 +258,6 @@
   position: relative;
   flex-shrink: 0;
   box-sizing: border-box;
-  /* ★ 意図しない視覚効果を明示的にリセット */
   outline: none;
   background-image: none;
   filter: none;
@@ -245,7 +273,6 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  /* ★ ネイティブ画像ドラッグを抑止（親のカスタムドラッグを優先） */
   -webkit-user-drag: none;
   user-select: none;
   pointer-events: none;
@@ -292,15 +319,23 @@
   pointer-events: none;
 }
 
-/* ===== ドラッグ中のソースセル：opacity/filter を使わず枠で表現 ===== */
+/* ===== 一括削除モードのカーソル ===== */
+#stj_export_modal.stj-bulk-delete-mode .stj-keyword-item:not(.editing) .stj-image-preview {
+  cursor: pointer;
+}
+#stj_export_modal.stj-bulk-delete-mode .stj-keyword-item:not(.editing) .stj-image-preview:active {
+  cursor: pointer;
+}
+
+/* ===== ドラッグ中のソースセル ===== */
 .stj-keyword-item.stj-dragging .stj-image-preview {
   border-color: #ff8c00;
   border-style: solid;
   box-shadow: 0 0 16px rgba(255, 140, 0, 0.85), inset 0 0 16px rgba(255, 140, 0, 0.4);
-  opacity: 0.35;   /* ★ 元セルを半透明化 */
+  opacity: 0.35;
 }
 
-/* ===== ドロップ先のセル：赤枠＋赤グロー ===== */
+/* ===== ドロップ先のセル ===== */
 .stj-keyword-item.stj-drag-over {
   outline: 4px solid #ff2d2d;
   outline-offset: -4px;
@@ -310,6 +345,36 @@
 .stj-keyword-item.stj-drag-over .stj-image-preview {
   border-color: #ff2d2d;
   border-style: solid;
+}
+
+/* ===== 一括削除モードで削除候補のセル ===== */
+.stj-keyword-item.stj-marked-for-delete {
+  outline: 4px solid #ff2d2d;
+  outline-offset: -4px;
+  box-shadow: 0 0 0 2px rgba(255, 45, 45, 0.4), 0 0 20px rgba(255, 45, 45, 0.7);
+  border-radius: 8px;
+}
+.stj-keyword-item.stj-marked-for-delete .stj-image-preview {
+  border-color: #ff2d2d;
+  border-style: solid;
+}
+.stj-keyword-item.stj-marked-for-delete .stj-image-preview::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 45, 45, 0.2);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ===== ドラッグ中はテスト枠を無視 ===== */
+#stj_export_modal.stj-drag-active #stj_test_section {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* ===== 入力エリア ===== */
@@ -358,6 +423,13 @@
   font-size: 14px !important;
 }
 
+/* ===== 編集モード時は左右の切り替えボタンを隠す ===== */
+.stj-keyword-item.editing .stj-image-preview button {
+  z-index: 4 !important;
+  pointer-events: none !important;
+  opacity: 0;
+}
+
 /* ===== デフォルト/サムネイル ===== */
 .stj-special-container {
   display: grid;
@@ -395,7 +467,6 @@
   box-sizing: border-box;
 }
 
-/* ★ 特殊セルの見出しも text-shadow 方式に統一 */
 .stj-special-item:nth-child(1) .stj-special-inputs::before,
 .stj-special-item:nth-child(2) .stj-special-inputs::before {
   position: absolute;
@@ -471,7 +542,7 @@
   font-weight: bold;
   width: 30px;
   height: 30px;
-  z-index: 25;   /* ★ 10 → 25：ドラッグ判定・編集オーバーレイより前面へ */
+  z-index: 25;
 }
 
 /* ===== 削除確認ダイアログ ===== */
@@ -532,6 +603,104 @@
   background-color: #2d3748;
 }
 
+/* ===== メッセージダイアログ（ボタンなし） ===== */
+#stj_message_dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 10060;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+}
+#stj_message_dialog .stj-message-box {
+  background-color: #2d3748;
+  border: 2px solid #48bb78;
+  border-radius: 12px;
+  padding: 30px 50px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 30px rgba(72, 187, 120, 0.5);
+  text-align: center;
+  min-width: 320px;
+}
+#stj_message_dialog .stj-message-text {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+/* ===== ドラッグゴースト ===== */
+.stj-drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 260px;
+  pointer-events: none;
+  z-index: 100000;
+  border-radius: 8px;
+  border: 3px solid #ff8c00;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.75),
+    0 0 24px rgba(255, 140, 0, 0.85),
+    inset 0 0 12px rgba(255, 140, 0, 0.35);
+  overflow: hidden;
+  background-color: #1a202c;
+  opacity: 0.5;
+  transition: none;
+  will-change: transform;
+}
+.stj-drag-ghost img,
+.stj-drag-ghost video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+.stj-drag-ghost::after {
+  content: attr(data-cell-num);
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow:
+    2px 0 0 #000000,
+    -2px 0 0 #000000,
+    0 2px 0 #000000,
+    0 -2px 0 #000000,
+    2px 2px 0 #000000,
+    -2px 2px 0 #000000,
+    2px -2px 0 #000000,
+    -2px -2px 0 #000000;
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+}
+.stj-drag-ghost::before {
+  content: "移動中";
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 12px;
+  background: rgba(255, 140, 0, 0.9);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 4px;
+  z-index: 2;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 /* ===== レスポンシブ ===== */
 @media (max-width: 1640px) {
   .stj-grid-container { grid-template-columns: repeat(5, 260px); min-width: 1300px; }
@@ -555,90 +724,4 @@
   .stj-special-item:nth-child(2) .stj-special-inputs::before {
     font-size: 18px;
   }
-}
-
-/* ===== ドラッグ中にカーソル追従するゴースト ===== */
-.stj-drag-ghost {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 260px;
-  height: 260px;
-  pointer-events: none;         /* elementFromPoint を妨げない */
-  z-index: 100000;
-  border-radius: 8px;
-  border: 3px solid #ff8c00;
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.75),
-    0 0 24px rgba(255, 140, 0, 0.85),
-    inset 0 0 12px rgba(255, 140, 0, 0.35);
-  overflow: hidden;
-  background-color: #1a202c;
-  opacity: 0.5;
-  /* 位置は JS で left/top を上書き */
-  transition: none;
-  will-change: transform;
-}
-.stj-drag-ghost img,
-.stj-drag-ghost video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-  pointer-events: none;
-}
-
-/* ゴースト右上の番号（コピー元と同じスタイル） */
-.stj-drag-ghost::after {
-  content: attr(data-cell-num);
-  position: absolute;
-  top: 6px;
-  right: 10px;
-  font-size: 40px;
-  font-weight: 900;
-  line-height: 1;
-  color: #ffffff;
-  text-shadow:
-    2px 0 0 #000000,
-    -2px 0 0 #000000,
-    0 2px 0 #000000,
-    0 -2px 0 #000000,
-    2px 2px 0 #000000,
-    -2px 2px 0 #000000,
-    2px -2px 0 #000000,
-    -2px -2px 0 #000000;
-  z-index: 2;
-  pointer-events: none;
-  user-select: none;
-}
-
-/* ゴースト下部に「移動中」のヒント表示 */
-.stj-drag-ghost::before {
-  content: "移動中";
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 3px 12px;
-  background: rgba(255, 140, 0, 0.9);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: bold;
-  border-radius: 4px;
-  z-index: 2;
-  pointer-events: none;
-  white-space: nowrap;
-}
-
-/* ===== 編集モード時は左右の切り替えボタンを編集オーバーレイの背面に隠す ===== */
-.stj-keyword-item.editing .stj-image-preview button {
-  z-index: 4 !important;   /* 編集フィルター（z-index:5）と入力エリア（z-index:10）より下に配置 */
-  pointer-events: none !important;  /* 万一クリックが届いても無効化 */
-  opacity: 0;              /* 視覚的にも完全に隠す */
-}
-
-/* ===== ドラッグ中はリアルタイムキーワード反応テスト枠を無視 ===== */
-#stj_export_modal.stj-drag-active #stj_test_section {
-  visibility: hidden;      /* 完全に非表示（レイアウトは維持） */
-  pointer-events: none;    /* クリック・ホバー・elementFromPoint から除外 */
 }
