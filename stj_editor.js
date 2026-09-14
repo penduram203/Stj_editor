@@ -13,7 +13,7 @@
     let confirmDialogEl = null;
     let pendingDeleteCallback = null;
 
-    // ===== カスタムドラッグ（HTML5 DnD を使わない） =====
+    // ===== カスタムドラッグ =====
     let pointerDragState = null;
     let pointerDragHandlerInstalled = false;
     const DRAG_THRESHOLD_PX = 5;
@@ -278,7 +278,88 @@
         parent.removeChild(placeholder);
     }
 
-    // ===== カスタムドラッグ ハンドラ（document に一度だけ登録） =====
+    // ===== カスタムドラッグゴーストの生成・追従・破棄 =====
+    function createDragGhost(sourceItem, cursorX, cursorY) {
+        const previewEl = sourceItem.querySelector('.stj-image-preview');
+        if (!previewEl) return null;
+
+        const rect = previewEl.getBoundingClientRect();
+
+        const ghost = document.createElement('div');
+        ghost.className = 'stj-drag-ghost';
+
+        // セル番号を取得（::after の content を読み取れないため、
+        // grid 内のインデックスから算出する）
+        const container = sourceItem.parentNode;
+        if (container) {
+            const items = Array.from(container.querySelectorAll('.stj-keyword-item'));
+            const num = items.indexOf(sourceItem) + 1;
+            ghost.dataset.cellNum = String(num);
+        }
+
+        // プレビュー内の img / video を複製
+        const media = previewEl.querySelector('img, video');
+        if (media) {
+            const cloned = media.cloneNode(true);
+            cloned.style.width = '100%';
+            cloned.style.height = '100%';
+            cloned.style.objectFit = 'contain';
+            cloned.style.display = 'block';
+            cloned.style.pointerEvents = 'none';
+            cloned.removeAttribute('id');
+            if (cloned.tagName === 'VIDEO') {
+                cloned.muted = true;
+                cloned.autoplay = true;
+                cloned.loop = true;
+                cloned.playsInline = true;
+                cloned.play().catch(() => {});
+            }
+            ghost.appendChild(cloned);
+        } else {
+            // メディア未設定なら「プレビュー」ラベルを表示
+            const fallback = document.createElement('div');
+            fallback.textContent = 'プレビュー';
+            fallback.style.position = 'absolute';
+            fallback.style.top = '50%';
+            fallback.style.left = '50%';
+            fallback.style.transform = 'translate(-50%, -50%)';
+            fallback.style.color = '#a0aec0';
+            fallback.style.fontSize = '14px';
+            fallback.style.pointerEvents = 'none';
+            ghost.appendChild(fallback);
+        }
+
+        // ゴーストの位置を、掴んだプレビュー内の相対位置に合わせて初期化
+        ghost.style.width = rect.width + 'px';
+        ghost.style.height = rect.height + 'px';
+        const offsetX = cursorX - rect.left;
+        const offsetY = cursorY - rect.top;
+        ghost.style.left = (cursorX - offsetX) + 'px';
+        ghost.style.top = (cursorY - offsetY) + 'px';
+
+        document.body.appendChild(ghost);
+
+        return {
+            el: ghost,
+            offsetX,
+            offsetY
+        };
+    }
+
+    function moveDragGhost(ghostState, cursorX, cursorY) {
+        if (!ghostState || !ghostState.el) return;
+        ghostState.el.style.left = (cursorX - ghostState.offsetX) + 'px';
+        ghostState.el.style.top = (cursorY - ghostState.offsetY) + 'px';
+    }
+
+    function removeDragGhost(ghostState) {
+        if (!ghostState) return;
+        if (ghostState.el && ghostState.el.parentNode) {
+            ghostState.el.parentNode.removeChild(ghostState.el);
+        }
+    }
+
+    // ===== document に一度だけ登録する Pointer ハンドラ =====
     function installPointerDragHandlers() {
         if (pointerDragHandlerInstalled) return;
         pointerDragHandlerInstalled = true;
@@ -289,14 +370,19 @@
             const dx = e.clientX - s.startX;
             const dy = e.clientY - s.startY;
 
+            // 閾値を超えた瞬間にドラッグ開始とゴースト生成
             if (!s.isDragging && (dx * dx + dy * dy) > (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) {
                 s.isDragging = true;
                 s.sourceItem.classList.add('stj-dragging');
+                s.ghostState = createDragGhost(s.sourceItem, e.clientX, e.clientY);
             }
 
             if (!s.isDragging) return;
 
-            // カーソル下の要素から最も近い .stj-keyword-item を探す
+            // ゴースト追従
+            moveDragGhost(s.ghostState, e.clientX, e.clientY);
+
+            // カーソル下のセルを検出して赤枠ハイライト
             const el = document.elementFromPoint(e.clientX, e.clientY);
             const target = el && el.closest ? el.closest('.stj-keyword-item') : null;
             const validTarget = (target && target !== s.sourceItem) ? target : null;
@@ -317,6 +403,7 @@
 
             if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
             if (s.currentTarget) s.currentTarget.classList.remove('stj-drag-over');
+            removeDragGhost(s.ghostState);
 
             if (s.isDragging) {
                 if (s.currentTarget && s.currentTarget !== s.sourceItem) {
@@ -329,6 +416,16 @@
                     s.sourceItem.classList.add('editing');
                 }
             }
+        });
+
+        // 念のため：ドラッグ中にウィンドウ外で離した場合の後始末
+        window.addEventListener('blur', () => {
+            if (!pointerDragState) return;
+            const s = pointerDragState;
+            pointerDragState = null;
+            if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
+            if (s.currentTarget) s.currentTarget.classList.remove('stj-drag-over');
+            removeDragGhost(s.ghostState);
         });
     }
 
@@ -596,18 +693,18 @@
     function attachKeywordRowListeners(item, index) {
         const previewEl = item.querySelector('.stj-image-preview');
         if (previewEl) {
-            // ★ カスタムドラッグ開始（HTML5 DnD は使用しない）
             previewEl.addEventListener('mousedown', function(e) {
                 if (e.button !== 0) return;
                 if (item.classList.contains('editing')) return;
-                e.preventDefault();      // テキスト選択・ネイティブドラッグを抑止
+                e.preventDefault();
                 e.stopPropagation();
                 pointerDragState = {
                     sourceItem: item,
                     startX: e.clientX,
                     startY: e.clientY,
                     isDragging: false,
-                    currentTarget: null
+                    currentTarget: null,
+                    ghostState: null
                 };
             });
         }
