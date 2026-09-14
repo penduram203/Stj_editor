@@ -20,13 +20,13 @@
   background-color: #2d3748;
 }
 
-/* モーダルウィンドウスタイル */
+/* モーダルウィンドウスタイル（8列対応のため画面幅いっぱいに近づける） */
 #stj_export_modal {
   display: none;
   position: fixed;
   top: 0;
-  left: 10vw;
-  width: 80vw;
+  left: 10px;
+  width: calc(100vw - 20px);
   height: 100vh;
   background-color: #2d3748;
   border: 1px solid #4a5568;
@@ -90,7 +90,7 @@
   color: white;
 }
 
-/* ===== キーワードセル（3列グリッド、固定サイズ） ===== */
+/* ===== キーワードセル（固定サイズ） ===== */
 .stj-keyword-item {
   position: relative;
   width: 220px;
@@ -105,10 +105,12 @@
   overflow: hidden;
   justify-self: center;
 }
+
+/* ===== キーワードグリッド（デフォルト8列） ===== */
 .stj-grid-container {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
   justify-items: center;
 }
 
@@ -124,7 +126,7 @@
   flex: 1;
 }
 
-/* ===== ❌削除ボタン（入力エリア左上に絶対配置） ===== */
+/* ===== ❌削除ボタン ===== */
 .stj-delete-row {
   position: absolute;
   top: 2px;
@@ -217,8 +219,6 @@
 .stj-keyword-item:not(.editing) .stj-image-preview {
   cursor: pointer;
 }
-
-/* 編集時の半透明黒フィルター（プレビュー上に被せ、UIの視認性を確保） */
 .stj-keyword-item.editing .stj-image-preview::after {
   content: '';
   position: absolute;
@@ -232,7 +232,6 @@
   pointer-events: none;
 }
 
-/* 入力エリア：プレビューに完全に重なる */
 .stj-inputs-container {
   display: none;
   position: absolute;
@@ -241,7 +240,7 @@
   right: 8px;
   bottom: 10px;
   padding: 6px 10px;
-  padding-top: 36px; /* ❌ボタン用の余白 */
+  padding-top: 36px;
   box-sizing: border-box;
   flex-direction: column;
   gap: 6px;
@@ -270,8 +269,6 @@
   margin-bottom: 0;
   min-width: 0;
 }
-
-/* 反映ボタン（コンパクト） */
 .stj-inputs-container .stj-apply-row {
   margin-top: 0 !important;
   padding: 5px 12px !important;
@@ -314,7 +311,6 @@
   box-sizing: border-box;
 }
 
-/* ===== タイトル（白文字 + 黒縁取り + 太字）：ファイル名入力欄の真上 ===== */
 .stj-special-item:nth-child(1) .stj-special-inputs::before,
 .stj-special-item:nth-child(2) .stj-special-inputs::before {
   position: absolute;
@@ -383,7 +379,6 @@
   padding: 8px;
 }
 
-/* ===== プレビュー内ナビゲーションボタン ===== */
 .stj-image-preview button {
   font-size: 16px;
   font-weight: bold;
@@ -450,52 +445,40 @@
   background-color: #2d3748;
 }
 
-/* ===== ブレークポイント ===== */
-@media (max-width: 1400px) {
-  #stj_export_modal { left: 5vw; width: 90vw; }
+/* ===== レスポンシブ：画面幅に応じてキーワード列数を段階的に減少 ===== */
+/* 8列の下限: 8×220 + 7×8 + padding 40 = 1856px → 余裕を見て 1880px */
+@media (max-width: 1880px) {
+  .stj-grid-container { grid-template-columns: repeat(7, 1fr); }
 }
-@media (max-width: 1300px) {
-  .stj-special-container,
-  .stj-grid-container {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .stj-special-item {
-    padding: 15px;
-    gap: 15px;
-  }
-  .stj-keyword-input, .stj-image-input {
-    font-size: 14px;
-    padding: 10px;
-  }
+/* 7列: 7×220 + 6×8 + 40 = 1628px → 1650px */
+@media (max-width: 1650px) {
+  .stj-grid-container { grid-template-columns: repeat(6, 1fr); }
 }
-@media (max-width: 1000px) {
-  .stj-special-container,
-  .stj-grid-container {
-    grid-template-columns: 1fr;
-  }
+/* 6列: 6×220 + 5×8 + 40 = 1400px → 1430px */
+@media (max-width: 1430px) {
+  .stj-grid-container { grid-template-columns: repeat(5, 1fr); }
 }
-@media (max-width: 768px) {
-  /* 特殊セル（デフォルト/サムネイル）のみ縦型化。キーワードセルは固定サイズ維持 */
-  .stj-special-item {
-    flex-direction: column;
-    gap: 15px;
-    align-items: center;
-    min-height: auto;
-  }
-  .stj-special-preview .stj-image-preview {
-    width: 100%;
-    height: 300px;
-    max-width: none;
-  }
-  .stj-special-inputs {
-    width: 100%;
-    justify-content: flex-start;
-  }
-  #stj_export_modal { left: 0; width: 100vw; padding: 10px; }
+/* 5列: 5×220 + 4×8 + 40 = 1172px → 1200px */
+@media (max-width: 1200px) {
+  .stj-grid-container { grid-template-columns: repeat(4, 1fr); }
+  .stj-special-container { grid-template-columns: repeat(2, 1fr); }
+}
+/* 4列: 4×220 + 3×8 + 40 = 944px → 980px */
+@media (max-width: 980px) {
+  .stj-grid-container { grid-template-columns: repeat(3, 1fr); }
+}
+/* 3列: 3×220 + 2×8 + 40 = 716px → 760px */
+@media (max-width: 760px) {
+  .stj-grid-container { grid-template-columns: repeat(2, 1fr); }
+  .stj-special-container { grid-template-columns: 1fr; }
   .stj-button-group { flex-direction: column; gap: 10px; }
   .stj-button-group > div { justify-content: center; }
   .stj-special-item:nth-child(1) .stj-special-inputs::before,
   .stj-special-item:nth-child(2) .stj-special-inputs::before {
     font-size: 16px;
   }
+}
+/* 2列の下限を割る場合 */
+@media (max-width: 520px) {
+  .stj-grid-container { grid-template-columns: 1fr; }
 }
