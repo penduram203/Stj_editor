@@ -13,6 +13,9 @@
     let confirmDialogEl = null;
     let pendingDeleteCallback = null;
 
+    // ★ ドラッグ中のセルを保持
+    let stjDraggedItem = null;
+
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
         return !!url.match(/\.(mp4|webm)$/i);
@@ -261,6 +264,20 @@
         if (!confirmDialogEl) return;
         confirmDialogEl.style.display = 'none';
         pendingDeleteCallback = null;
+    }
+
+    // ===== セルのスワップ（ドラッグ入れ替え） =====
+    //   a, b の DOM ノードを入れ替える。CSS カウンターは DOM 順で自動採番されるため、
+    //   入れ替え後の番号は各位置に自動的に再割り当てされる。
+    function swapCells(a, b) {
+        if (!a || !b || a === b) return;
+        const parent = a.parentNode;
+        if (!parent || parent !== b.parentNode) return;
+        const placeholder = document.createComment('stj-swap');
+        parent.insertBefore(placeholder, a);
+        parent.insertBefore(a, b);
+        parent.insertBefore(b, placeholder);
+        parent.removeChild(placeholder);
     }
 
     // ===== ボタン & モーダル =====
@@ -526,13 +543,58 @@
     function attachKeywordRowListeners(item, index) {
         const previewEl = item.querySelector('.stj-image-preview');
         if (previewEl) {
+            // ★ クリック → 編集モード
             previewEl.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (!item.classList.contains('editing')) {
                     item.classList.add('editing');
                 }
             });
+
+            // ★ ドラッグ開始
+            previewEl.setAttribute('draggable', 'true');
+            previewEl.addEventListener('dragstart', function(e) {
+                e.stopPropagation();
+                stjDraggedItem = item;
+                try {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', 'stj-cell');
+                } catch (err) { /* 一部ブラウザ対策 */ }
+                // ドラッグ画像が生成されてから視覚効果を付与
+                setTimeout(() => item.classList.add('stj-dragging'), 0);
+            });
+            previewEl.addEventListener('dragend', function(e) {
+                e.stopPropagation();
+                item.classList.remove('stj-dragging');
+                stjDraggedItem = null;
+                document.querySelectorAll('.stj-keyword-item.stj-drag-over')
+                    .forEach(el => el.classList.remove('stj-drag-over'));
+            });
         }
+
+        // ★ ドロップ受け入れ
+        item.addEventListener('dragover', function(e) {
+            if (!stjDraggedItem || stjDraggedItem === item) return;
+            e.preventDefault();
+            try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+            if (!item.classList.contains('stj-drag-over')) {
+                item.classList.add('stj-drag-over');
+            }
+        });
+        item.addEventListener('dragleave', function(e) {
+            if (e.target === item) {
+                item.classList.remove('stj-drag-over');
+            }
+        });
+        item.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            item.classList.remove('stj-drag-over');
+            if (!stjDraggedItem || stjDraggedItem === item) return;
+            swapCells(item, stjDraggedItem);
+            stjDraggedItem = null;
+            runLiveTest();
+        });
 
         const deleteButton = item.querySelector('.stj-delete-row');
         if (deleteButton) {
@@ -545,11 +607,12 @@
             });
         }
 
+        // ★ 決定ボタン：要素ベースでプレビュー更新
         const applyButton = item.querySelector('.stj-apply-row');
         if (applyButton) {
             applyButton.addEventListener('click', function(e) {
                 e.stopPropagation();
-                updateSinglePreview(index);
+                updateSinglePreviewByItem(item);
                 item.classList.remove('editing');
             });
         }
@@ -650,7 +713,7 @@
         attachKeywordRowListeners(newItem, itemCount);
 
         modal.scrollTop = modal.scrollHeight;
-        setTimeout(() => updateSinglePreview(itemCount), 100);
+        setTimeout(() => updateSinglePreviewByItem(newItem), 100);
         runLiveTest();
     }
 
@@ -712,18 +775,21 @@
         await updateImagePreview('stj_preview_default', charName, document.getElementById('stj_default_image')?.value);
         await updateImagePreview('stj_preview_thumbnail', charName, document.getElementById('stj_thumbnail_image')?.value);
         const keywordItems = document.querySelectorAll('.stj-keyword-item');
-        for (let i = 0; i < keywordItems.length; i++) {
-            await updateSinglePreview(i);
+        for (const item of keywordItems) {
+            await updateSinglePreviewByItem(item);
         }
     }
 
-    async function updateSinglePreview(index) {
+    // ★ 要素ベースのプレビュー更新（入れ替え後も正しく動作）
+    async function updateSinglePreviewByItem(item) {
+        if (!item) return;
         const nameEl = document.getElementById('stj_char_name_display');
         if (!nameEl) return;
         const charName = nameEl.textContent;
-        const imageInput = document.getElementById(`stj_image_name_${index}`);
-        if (!imageInput) return;
-        await updateImagePreview(`stj_preview_${index}`, charName, imageInput.value);
+        const imageInput = item.querySelector('.stj-image-input');
+        const previewEl = item.querySelector('.stj-image-preview');
+        if (!imageInput || !previewEl) return;
+        await updateImagePreview(previewEl.id, charName, imageInput.value);
     }
 
     async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
@@ -751,12 +817,12 @@
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
                 mediaHtml = `
-                    <video src="${fullPath}" autoplay loop muted playsinline preload="auto"
+                    <video src="${fullPath}" autoplay loop muted playsinline preload="auto" draggable="false"
                            style="width: 100%; height: 100%; object-fit: contain; display: block; background-color: rgba(0,0,0,0.4);">
                     </video>`;
             } else {
                 mediaHtml = `
-                    <img src="${fullPath}" alt="${fileName}"
+                    <img src="${fullPath}" alt="${fileName}" draggable="false"
                          style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
             }
 
