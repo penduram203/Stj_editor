@@ -101,6 +101,7 @@
   align-items: center;
   min-height: 230px;
   box-sizing: border-box;
+  position: relative;
 }
 .stj-grid-container {
   display: grid;
@@ -229,6 +230,20 @@
   min-width: 0;
 }
 
+/* ===== キーワードセル：通常は入力欄を非表示、プレビュークリックで表示 ===== */
+.stj-keyword-item .stj-inputs-container {
+  display: none;
+}
+.stj-keyword-item.editing .stj-inputs-container {
+  display: flex;
+}
+.stj-keyword-item:not(.editing) .stj-image-preview {
+  cursor: pointer;
+}
+.stj-keyword-item:not(.editing) {
+  justify-content: center;
+}
+
 /* ===== デフォルト/サムネイル（3列グリッド） ===== */
 .stj-special-container {
   display: grid;
@@ -248,14 +263,11 @@
   box-sizing: border-box;
   position: relative;
 }
-
 .stj-special-preview {
   flex-shrink: 0;
 }
-
-/* ===== 入力エリア（プレビュー右側）：タイトル付き ===== */
 .stj-special-inputs {
-  position: relative;              /* タイトル絶対配置の基準 */
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -263,23 +275,23 @@
   gap: 15px;
   justify-content: center;
   height: 100%;
-  padding-top: 40px;               /* タイトル分の上部余白 */
+  padding-top: 40px;
   box-sizing: border-box;
 }
 
-/* ===== タイトル（白文字 + 黒縁取り + 太字）：ファイル名入力欄の真上 ===== */
+/* ===== タイトル（白文字 + 黒縁取り + 太字） ===== */
 .stj-special-item:nth-child(1) .stj-special-inputs::before,
 .stj-special-item:nth-child(2) .stj-special-inputs::before {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  text-align: left;                /* ファイル名ラベルと左端を揃える */
+  text-align: left;
   font-size: 20px;
   font-weight: 900;
   letter-spacing: 2px;
-  color: #ffffff;                  /* 白文字 */
-  -webkit-text-stroke: 1px #000000;/* 黒縁取り（WebKit系） */
+  color: #ffffff;
+  -webkit-text-stroke: 1px #000000;
   text-shadow:
     -2px -2px 0 #000000, 2px -2px 0 #000000,
     -2px  2px 0 #000000, 2px  2px 0 #000000,
@@ -345,12 +357,69 @@
   z-index: 10;
 }
 
+/* ===== 削除確認ダイアログ ===== */
+#stj_confirm_dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 10050;
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+#stj_confirm_dialog .stj-confirm-box {
+  background-color: #2d3748;
+  border: 2px solid #4a5568;
+  border-radius: 12px;
+  padding: 30px 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  text-align: center;
+  min-width: 320px;
+}
+#stj_confirm_dialog .stj-confirm-message {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 25px;
+  white-space: nowrap;
+}
+#stj_confirm_dialog .stj-confirm-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+#stj_confirm_dialog .stj-confirm-buttons button {
+  padding: 10px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  min-width: 90px;
+}
+#stj_confirm_dialog .stj-confirm-yes {
+  background-color: #e53e3e;
+  color: #ffffff;
+}
+#stj_confirm_dialog .stj-confirm-yes:hover {
+  background-color: #c53030;
+}
+#stj_confirm_dialog .stj-confirm-no {
+  background-color: #4a5568;
+  color: #ffffff;
+}
+#stj_confirm_dialog .stj-confirm-no:hover {
+  background-color: #2d3748;
+}
+
 /* ===== ブレークポイント ===== */
 @media (max-width: 1400px) {
   #stj_export_modal { left: 5vw; width: 90vw; }
 }
 @media (max-width: 1300px) {
-  /* 2列レイアウトに切替 */
   .stj-special-container,
   .stj-grid-container {
     grid-template-columns: repeat(2, 1fr);
@@ -369,7 +438,6 @@
   }
 }
 @media (max-width: 1000px) {
-  /* 1列レイアウトに切替 */
   .stj-special-container,
   .stj-grid-container {
     grid-template-columns: 1fr;
@@ -394,7 +462,6 @@
   #stj_export_modal { left: 0; width: 100vw; padding: 10px; }
   .stj-button-group { flex-direction: column; gap: 10px; }
   .stj-button-group > div { justify-content: center; }
-  /* タイトルを少し縮小 */
   .stj-special-item:nth-child(1) .stj-special-inputs::before,
   .stj-special-item:nth-child(2) .stj-special-inputs::before {
     font-size: 16px;
