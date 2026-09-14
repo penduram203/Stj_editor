@@ -5,6 +5,13 @@
     // 動画・画像のプリロード用キャッシュマップ
     const mediaCache = new Map();
 
+    // ===== シングルトン参照（多重生成防止） =====
+    let stjModalEl = null;
+    let stjButtonEl = null;
+    let outsideClickHandlerInstalled = false;
+    let modalOpenedTimestamp = 0;
+    const MODAL_OPEN_GUARD_MS = 300; // 開いた直後のクリックで閉じないためのガード
+
     // 動画ファイルかどうかを判定
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
@@ -85,13 +92,12 @@
         });
     }
 
-    // 拡張子付きのファイル名を受け取り、存在確認だけを行う関数（総当たり廃止）
+    // 拡張子付きのファイル名を受け取り、存在確認だけを行う関数
     async function detectImageExtension(charName, fileNameWithExt) {
         if (!charName || !fileNameWithExt) return null;
-        
-        // 既にフルパス、あるいはファイル名として渡されたものをそのまま構築
-        const path = fileNameWithExt.startsWith('addchara/') 
-            ? fileNameWithExt 
+
+        const path = fileNameWithExt.startsWith('addchara/')
+            ? fileNameWithExt
             : `addchara/${charName}/${fileNameWithExt}`;
 
         const exists = await checkMediaExists(path);
@@ -102,7 +108,7 @@
     function extractFileNameFromPath(path) {
         if (!path) return '';
         const parts = path.split('/');
-        return parts[parts.length - 1]; // 拡張子を保持したまま返す
+        return parts[parts.length - 1];
     }
 
     // ファイル名文字列を配列に変換（カンマ区切り対応）
@@ -131,7 +137,6 @@
 
     // --- 条件評価エンジン（カッコ / NOT / AND / OR 対応） ---
 
-    // 単語形式の演算子を記号形式へ正規化（and→+, or→,, not→!）
     function normalizeConditionExpression(expr) {
         if (!expr || typeof expr !== 'string') return '';
         return expr
@@ -140,7 +145,6 @@
             .replace(/\bnot\b/gi, '!');
     }
 
-    // トークナイザ：カッコ・否定・AND・OR・キーワードに分解
     function tokenizeCondition(expr) {
         const tokens = [];
         let i = 0;
@@ -156,7 +160,6 @@
                 i++;
                 continue;
             }
-            // キーワード：特殊文字に当たるまで読み進める（スペース許容）
             let j = i;
             while (j < len && !'()!+,'.includes(expr[j])) {
                 j++;
@@ -170,7 +173,6 @@
         return tokens;
     }
 
-    // 再帰下降パーサ（OR < AND < NOT < PRIMARY の優先順位）
     function parseConditionTokens(tokens) {
         let pos = 0;
         const peek = () => tokens[pos];
@@ -215,7 +217,7 @@
             if (t.type === '(') {
                 consume('(');
                 const inner = parseOr();
-                consume(')'); // 閉じカッコが無くても継続
+                consume(')');
                 return inner;
             }
             if (t.type === 'KEYWORD') {
@@ -228,7 +230,6 @@
         return parseOr();
     }
 
-    // AST評価
     function evaluateConditionNode(node, lowerText) {
         if (!node) return false;
         switch (node.type) {
@@ -261,7 +262,6 @@
         }
     }
 
-    // 複雑度スコア計算（実際の表示ロジックと一致させるためのソートキー）
     function calcConditionComplexity(condition) {
         if (!condition || typeof condition !== 'string') return 0;
         return (
@@ -276,51 +276,80 @@
         );
     }
 
-    // 新規ボタン作成関数
+    // ===== ボタン & モーダルのシングルトン生成 =====
+
     function createExportButton() {
         const buttonContainer = document.querySelector('#rm_ch_create_block .form_create_bottom_buttons_block');
         if (!buttonContainer) return;
-        if (document.getElementById('stj_export_button')) return;
 
-        const exportButton = document.createElement('button');
-        exportButton.id = 'stj_export_button';
-        exportButton.textContent = 'JSONデータ編集';
-        exportButton.className = 'menu_button';
-        buttonContainer.prepend(exportButton);
-        createExportModal(exportButton);
-    }
-
-    // セルごとの要素イベント設定（反映ボタン & 削除ボタン）
-    function attachKeywordRowListeners(item, index) {
-        const deleteButton = item.querySelector('.stj-delete-row');
-        if (deleteButton) {
-            deleteButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                item.remove();
-                runLiveTest(); // 行削除時にもテストを再実行
-            });
+        // ボタンがまだDOMに存在していれば、コンテナだけ確認して再利用
+        if (stjButtonEl && document.body.contains(stjButtonEl)) {
+            if (stjButtonEl.parentNode !== buttonContainer) {
+                buttonContainer.prepend(stjButtonEl);
+            }
+        } else {
+            // 新規ボタン作成
+            const exportButton = document.createElement('button');
+            exportButton.id = 'stj_export_button';
+            exportButton.textContent = 'JSONデータ編集';
+            exportButton.className = 'menu_button';
+            // キャプチャフェーズでクリックを先取り（他リスナーより先に実行）
+            exportButton.addEventListener('click', handleExportButtonClick, true);
+            buttonContainer.prepend(exportButton);
+            stjButtonEl = exportButton;
         }
 
-        const applyButton = item.querySelector('.stj-apply-row');
-        if (applyButton) {
-            applyButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                updateSinglePreview(index);
-            });
+        // モーダルが無ければ作成
+        if (!stjModalEl || !document.body.contains(stjModalEl)) {
+            createExportModal();
         }
-
-        // キーワードや画像入力の変更時にもテスト判定を更新
-        const inputs = item.querySelectorAll('input');
-        inputs.forEach(input => {
-            input.addEventListener('input', runLiveTest);
-        });
     }
 
-    // 共通の反映ボタン用CSSスタイル（大きめ・黒太字）
+    function handleExportButtonClick(e) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        openExportModal();
+    }
+
+    function openExportModal() {
+        if (!stjModalEl) return;
+
+        stjModalEl.style.display = 'block';
+        stjModalEl.style.position = 'fixed';
+        stjModalEl.style.top = '0';
+        stjModalEl.style.left = '10vw';
+        stjModalEl.style.width = '80vw';
+        stjModalEl.style.height = '100vh';
+        stjModalEl.style.zIndex = '10001';
+        stjModalEl.scrollTop = 0;
+
+        modalOpenedTimestamp = Date.now();
+
+        const charName = detectCharacterNameFromDOM() || '';
+        const nameEl = document.getElementById('stj_char_name_display');
+        if (nameEl) nameEl.textContent = charName;
+
+        (async () => {
+            try {
+                await loadExistingJSONData(charName);
+                loadSavedData(charName);
+                setupPreviewListeners();
+                runLiveTest();
+            } catch (err) {
+                console.error('[STJ Editor] モーダル表示エラー:', err);
+            }
+        })();
+    }
+
+    function closeExportModal() {
+        if (!stjModalEl) return;
+        stjModalEl.style.display = 'none';
+    }
+
     const applyBtnStyle = 'margin-top: 6px; padding: 6px 14px; font-size: 13px; font-weight: bold; color: #000000; background-color: #e0e0e0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; display: inline-block; width: fit-content;';
 
-    // モーダルウィンドウ作成関数
-    function createExportModal(anchorButton) {
+    function createExportModal() {
+        // 念のため既存のモーダルを除去
         const existingModal = document.getElementById('stj_export_modal');
         if (existingModal) existingModal.remove();
 
@@ -415,52 +444,54 @@
             </div>
         `;
         document.body.appendChild(modal);
+        stjModalEl = modal;
 
-        modal.addEventListener('click', function(e) { e.stopPropagation(); });
+        // モーダル内のクリックは伝播させない
+        modal.addEventListener('click', (e) => e.stopPropagation());
 
-        // テスト用入力エリアのイベント設定
+        // テスト入力欄
         const testInput = document.getElementById('stj_test_input');
         if (testInput) {
             testInput.addEventListener('input', runLiveTest);
         }
 
-        document.getElementById('stj_add_keyword').addEventListener('click', function(e) {
-            e.stopPropagation();
-            addKeywordRow(modal);
-        });
-        anchorButton.addEventListener('click', async function(e) {
-            e.stopPropagation();
-            modal.style.display = 'block';
-            modal.style.top = '0';
-            modal.style.left = '10vw';
-            modal.style.width = '80vw';
-            modal.style.height = '100vh';
-            const charName = detectCharacterNameFromDOM() || '';
-            document.getElementById('stj_char_name_display').textContent = charName;
-            await loadExistingJSONData(charName);
-            loadSavedData(charName);
-            setupPreviewListeners();
-            runLiveTest(); // モーダルオープン時にもテスト実行
-        });
-        document.getElementById('stj_cancel_export').addEventListener('click', function(e) {
-            e.stopPropagation();
-            modal.style.display = 'none';
-        });
-        document.getElementById('stj_export_json').addEventListener('click', function(e) {
-            e.stopPropagation();
-            exportJSON();
-        });
-        document.getElementById('stj_save_data').addEventListener('click', function(e) {
-            e.stopPropagation();
-            saveData();
-        });
-        document.addEventListener('click', function(e) {
-            if (e.target !== anchorButton && !modal.contains(e.target)) {
-                modal.style.display = 'none';
-            }
-        });
+        // キーワード追加
+        const addBtn = document.getElementById('stj_add_keyword');
+        if (addBtn) {
+            addBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                addKeywordRow(modal);
+            });
+        }
 
-        // デフォルト/サムネイルの変更反映ボタン設定
+        // キャンセル
+        const cancelBtn = document.getElementById('stj_cancel_export');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeExportModal();
+            });
+        }
+
+        // JSON出力
+        const exportBtn = document.getElementById('stj_export_json');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                exportJSON();
+            });
+        }
+
+        // セーブ
+        const saveBtn = document.getElementById('stj_save_data');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                saveData();
+            });
+        }
+
+        // デフォルト/サムネイル反映ボタン
         modal.querySelectorAll('.stj-apply-special').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -474,13 +505,53 @@
             });
         });
 
+        // 最初のキーワード行
         const firstItem = modal.querySelector('.stj-keyword-item');
         if (firstItem) {
             attachKeywordRowListeners(firstItem, 0);
         }
+
+        // ===== 外側クリックで閉じるハンドラ（一度だけ登録） =====
+        if (!outsideClickHandlerInstalled) {
+            outsideClickHandlerInstalled = true;
+            document.addEventListener('mousedown', (e) => {
+                if (!stjModalEl) return;
+                if (stjModalEl.style.display !== 'block') return;
+                // 開いた直後は閉じない（イベント競合対策）
+                if (Date.now() - modalOpenedTimestamp < MODAL_OPEN_GUARD_MS) return;
+                // モーダル内クリックは無視
+                if (stjModalEl.contains(e.target)) return;
+                // 起動ボタンのクリックは無視
+                if (stjButtonEl && stjButtonEl.contains(e.target)) return;
+                closeExportModal();
+            }, true); // キャプチャフェーズ
+        }
     }
 
-    // リアルタイムマッチングテストの判定関数（条件評価エンジン統合版）
+    function attachKeywordRowListeners(item, index) {
+        const deleteButton = item.querySelector('.stj-delete-row');
+        if (deleteButton) {
+            deleteButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                item.remove();
+                runLiveTest();
+            });
+        }
+
+        const applyButton = item.querySelector('.stj-apply-row');
+        if (applyButton) {
+            applyButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                updateSinglePreview(index);
+            });
+        }
+
+        const inputs = item.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', runLiveTest);
+        });
+    }
+
     function runLiveTest() {
         const testInput = document.getElementById('stj_test_input');
         const testResult = document.getElementById('stj_test_result');
@@ -489,7 +560,6 @@
         const text = testInput.value.trim();
         const items = document.querySelectorAll('.stj-keyword-item');
 
-        // ハイライトのリセット
         items.forEach(item => {
             item.style.border = '';
             item.style.backgroundColor = '';
@@ -500,7 +570,6 @@
             return;
         }
 
-        // 実際の表示ロジックと一致させるため複雑度でソート
         const candidates = [];
         items.forEach(item => {
             const kwInput = item.querySelector('.stj-keyword-input');
@@ -602,13 +671,16 @@
         };
 
         if (imageMap.default !== undefined) {
-            document.getElementById('stj_default_image').value = toInputValue(imageMap.default);
+            const el = document.getElementById('stj_default_image');
+            if (el) el.value = toInputValue(imageMap.default);
         }
         if (imageMap.thumbnail !== undefined) {
-            document.getElementById('stj_thumbnail_image').value = toInputValue(imageMap.thumbnail);
+            const el = document.getElementById('stj_thumbnail_image');
+            if (el) el.value = toInputValue(imageMap.thumbnail);
         }
 
         const container = document.getElementById('stj_keywords_container');
+        if (!container) return;
         container.innerHTML = '';
         let index = 0;
         Object.entries(imageMap).forEach(([key, val]) => {
@@ -626,7 +698,9 @@
     }
 
     async function updatePreview() {
-        const charName = document.getElementById('stj_char_name_display').textContent;
+        const nameEl = document.getElementById('stj_char_name_display');
+        if (!nameEl) return;
+        const charName = nameEl.textContent;
         await updateImagePreview('stj_preview_default', charName, document.getElementById('stj_default_image')?.value);
         await updateImagePreview('stj_preview_thumbnail', charName, document.getElementById('stj_thumbnail_image')?.value);
         const keywordItems = document.querySelectorAll('.stj-keyword-item');
@@ -636,13 +710,14 @@
     }
 
     async function updateSinglePreview(index) {
-        const charName = document.getElementById('stj_char_name_display').textContent;
+        const nameEl = document.getElementById('stj_char_name_display');
+        if (!nameEl) return;
+        const charName = nameEl.textContent;
         const imageInput = document.getElementById(`stj_image_name_${index}`);
         if (!imageInput) return;
         await updateImagePreview(`stj_preview_${index}`, charName, imageInput.value);
     }
 
-    // 指定プレビューボックスへ画像または動画を表示（高速再生・キャッシュ最適化版）
     async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
         const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
@@ -663,7 +738,7 @@
 
         const fileName = extractFileNameFromPath(imageNames[currentIndex]);
         const fullPath = await detectImageExtension(charName, fileName);
-        
+
         if (fullPath !== null) {
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
@@ -673,7 +748,7 @@
                     </video>`;
             } else {
                 mediaHtml = `
-                    <img src="${fullPath}" alt="${fileName}" 
+                    <img src="${fullPath}" alt="${fileName}"
                          style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
             }
 
@@ -686,7 +761,6 @@
                 }
             }
 
-            // 複数指定時のナビゲーションボタン & インデックス表示
             if (imageNames.length > 1) {
                 const leftButton = document.createElement('button');
                 leftButton.innerHTML = '←';
@@ -774,7 +848,8 @@
     }
 
     function exportJSON() {
-        const charName = document.getElementById('stj_char_name_display').textContent;
+        const nameEl = document.getElementById('stj_char_name_display');
+        const charName = nameEl ? nameEl.textContent : '';
         if (!charName) {
             alert('キャラクター名が設定されていません');
             return;
@@ -825,7 +900,8 @@
     }
 
     function saveData() {
-        const charName = document.getElementById('stj_char_name_display').textContent;
+        const nameEl = document.getElementById('stj_char_name_display');
+        const charName = nameEl ? nameEl.textContent : '';
         if (!charName) {
             alert('キャラクター名が設定されていません');
             return;
@@ -861,9 +937,12 @@
         const data = stjSettings[charName];
         if (!data) return;
         try {
-            document.getElementById('stj_default_image').value = data.defaultImage || '';
-            document.getElementById('stj_thumbnail_image').value = data.thumbnailImage || '';
+            const defEl = document.getElementById('stj_default_image');
+            if (defEl) defEl.value = data.defaultImage || '';
+            const thumbEl = document.getElementById('stj_thumbnail_image');
+            if (thumbEl) thumbEl.value = data.thumbnailImage || '';
             const container = document.getElementById('stj_keywords_container');
+            if (!container) return;
             container.innerHTML = '';
             if (data.keywords && data.keywords.length > 0) {
                 data.keywords.forEach((kw, index) => {
