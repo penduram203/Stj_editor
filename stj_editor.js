@@ -296,7 +296,6 @@
     function openExportModal() {
         if (!stjModalEl) return;
 
-        // ★ インラインスタイルを明示的に設定（left: 0vw / width: 85vw）
         stjModalEl.style.display = 'block';
         stjModalEl.style.position = 'fixed';
         stjModalEl.style.top = '0px';
@@ -368,7 +367,7 @@
                             <label for="stj_default_image">ファイル名</label>
                             <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                             <div>
-                                <button type="button" class="stj-apply-special" data-target="default" style="${applyBtnStyle}">反映</button>
+                                <button type="button" class="stj-apply-special" data-target="default" style="${applyBtnStyle}">決定</button>
                             </div>
                         </div>
                     </div>
@@ -384,7 +383,7 @@
                             <label for="stj_thumbnail_image">ファイル名</label>
                             <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                             <div>
-                                <button type="button" class="stj-apply-special" data-target="thumbnail" style="${applyBtnStyle}">反映</button>
+                                <button type="button" class="stj-apply-special" data-target="thumbnail" style="${applyBtnStyle}">決定</button>
                             </div>
                         </div>
                     </div>
@@ -408,7 +407,7 @@
                                 <label for="stj_image_name_0">ファイル名</label>
                                 <input type="text" id="stj_image_name_0" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                                 <div>
-                                    <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
+                                    <button type="button" class="stj-apply-row" style="${applyBtnStyle}">決定</button>
                                 </div>
                             </div>
                         </div>
@@ -640,7 +639,7 @@
                         <label for="stj_image_name_${itemCount}">ファイル名</label>
                         <input type="text" id="stj_image_name_${itemCount}" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                         <div>
-                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
+                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">決定</button>
                         </div>
                     </div>
                 </div>
@@ -982,7 +981,7 @@
                         <label for="stj_image_name_${index}">ファイル名</label>
                         <input type="text" id="stj_image_name_${index}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り">
                         <div>
-                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">反映</button>
+                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">決定</button>
                         </div>
                     </div>
                 </div>
