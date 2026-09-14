@@ -2,23 +2,22 @@
     const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'bmp', 'mp4', 'webm'];
     const MODULE_NAME = 'stj_editor';
 
-    // 動画・画像のプリロード用キャッシュマップ
     const mediaCache = new Map();
 
-    // ===== シングルトン参照（多重生成防止） =====
     let stjModalEl = null;
     let stjButtonEl = null;
     let outsideClickHandlerInstalled = false;
     let modalOpenedTimestamp = 0;
-    const MODAL_OPEN_GUARD_MS = 300; // 開いた直後のクリックで閉じないためのガード
+    const MODAL_OPEN_GUARD_MS = 300;
 
-    // 動画ファイルかどうかを判定
+    let confirmDialogEl = null;
+    let pendingDeleteCallback = null;
+
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
         return !!url.match(/\.(mp4|webm)$/i);
     }
 
-    // SillyTavern context を取得するヘルパー
     function getSTContext() {
         if (window.SillyTavern && typeof window.SillyTavern.getContext === 'function') {
             return window.SillyTavern.getContext();
@@ -26,7 +25,6 @@
         return null;
     }
 
-    // extensionSettings の初期化・取得ヘルパー
     function getExtensionSettings() {
         const context = getSTContext();
         if (!context || !context.extensionSettings) {
@@ -39,7 +37,6 @@
         return context.extensionSettings[MODULE_NAME];
     }
 
-    // 設定をサーバー側へ保存依頼するヘルパー
     function persistSettings() {
         const context = getSTContext();
         if (context && typeof context.saveSettingsDebounced === 'function') {
@@ -49,7 +46,6 @@
         }
     }
 
-    // DOMからキャラクター名を検出する関数
     function detectCharacterNameFromDOM() {
         const nameHolder = document.querySelector('#character_name_holder');
         if (nameHolder && nameHolder.textContent) return nameHolder.textContent.trim();
@@ -58,7 +54,6 @@
         return null;
     }
 
-    // メディアの高速存在確認 & キャッシュ化
     function checkMediaExists(mediaUrl) {
         if (mediaCache.has(mediaUrl)) {
             return Promise.resolve(mediaCache.get(mediaUrl));
@@ -92,32 +87,26 @@
         });
     }
 
-    // 拡張子付きのファイル名を受け取り、存在確認だけを行う関数
     async function detectImageExtension(charName, fileNameWithExt) {
         if (!charName || !fileNameWithExt) return null;
-
         const path = fileNameWithExt.startsWith('addchara/')
             ? fileNameWithExt
             : `addchara/${charName}/${fileNameWithExt}`;
-
         const exists = await checkMediaExists(path);
         return exists ? path : null;
     }
 
-    // 拡張子を含むパスからファイル名（拡張子込み）をそのまま抽出
     function extractFileNameFromPath(path) {
         if (!path) return '';
         const parts = path.split('/');
         return parts[parts.length - 1];
     }
 
-    // ファイル名文字列を配列に変換（カンマ区切り対応）
     function parseImageNames(input) {
         if (!input) return [];
         return input.split(',').map(name => name.trim()).filter(name => name.length > 0);
     }
 
-    // JSON内を再帰探索して image_display_extension を見つける
     function findImageMapInData(data) {
         if (data === null || typeof data !== 'object') return null;
         if (data.hasOwnProperty('image_display_extension')) {
@@ -135,8 +124,7 @@
         return null;
     }
 
-    // --- 条件評価エンジン（カッコ / NOT / AND / OR 対応） ---
-
+    // --- 条件評価エンジン ---
     function normalizeConditionExpression(expr) {
         if (!expr || typeof expr !== 'string') return '';
         return expr
@@ -151,23 +139,16 @@
         const len = expr.length;
         while (i < len) {
             const ch = expr[i];
-            if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
-                i++;
-                continue;
-            }
+            if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') { i++; continue; }
             if (ch === '(' || ch === ')' || ch === '!' || ch === '+' || ch === ',') {
                 tokens.push({ type: ch, value: ch });
                 i++;
                 continue;
             }
             let j = i;
-            while (j < len && !'()!+,'.includes(expr[j])) {
-                j++;
-            }
+            while (j < len && !'()!+,'.includes(expr[j])) j++;
             const raw = expr.slice(i, j).trim();
-            if (raw) {
-                tokens.push({ type: 'KEYWORD', value: raw });
-            }
+            if (raw) tokens.push({ type: 'KEYWORD', value: raw });
             i = j > i ? j : i + 1;
         }
         return tokens;
@@ -191,7 +172,6 @@
             }
             return node;
         }
-
         function parseAnd() {
             let node = parseUnary();
             while (peek() && peek().type === '+') {
@@ -201,16 +181,13 @@
             }
             return node;
         }
-
         function parseUnary() {
             if (peek() && peek().type === '!') {
                 consume('!');
-                const operand = parseUnary();
-                return { type: 'NOT', operand };
+                return { type: 'NOT', operand: parseUnary() };
             }
             return parsePrimary();
         }
-
         function parsePrimary() {
             const t = peek();
             if (!t) return null;
@@ -226,7 +203,6 @@
             }
             return null;
         }
-
         return parseOr();
     }
 
@@ -236,11 +212,9 @@
             case 'KEYWORD':
                 return lowerText.includes(node.value.toLowerCase());
             case 'AND':
-                return evaluateConditionNode(node.left, lowerText)
-                    && evaluateConditionNode(node.right, lowerText);
+                return evaluateConditionNode(node.left, lowerText) && evaluateConditionNode(node.right, lowerText);
             case 'OR':
-                return evaluateConditionNode(node.left, lowerText)
-                    || evaluateConditionNode(node.right, lowerText);
+                return evaluateConditionNode(node.left, lowerText) || evaluateConditionNode(node.right, lowerText);
             case 'NOT':
                 return !evaluateConditionNode(node.operand, lowerText);
             default:
@@ -276,30 +250,38 @@
         );
     }
 
-    // ===== ボタン & モーダルのシングルトン生成 =====
+    // ===== 削除確認ダイアログ =====
+    function showDeleteConfirmDialog(onConfirm) {
+        if (!confirmDialogEl) return;
+        pendingDeleteCallback = onConfirm;
+        confirmDialogEl.style.display = 'flex';
+    }
 
+    function hideDeleteConfirmDialog() {
+        if (!confirmDialogEl) return;
+        confirmDialogEl.style.display = 'none';
+        pendingDeleteCallback = null;
+    }
+
+    // ===== ボタン & モーダル =====
     function createExportButton() {
         const buttonContainer = document.querySelector('#rm_ch_create_block .form_create_bottom_buttons_block');
         if (!buttonContainer) return;
 
-        // ボタンがまだDOMに存在していれば、コンテナだけ確認して再利用
         if (stjButtonEl && document.body.contains(stjButtonEl)) {
             if (stjButtonEl.parentNode !== buttonContainer) {
                 buttonContainer.prepend(stjButtonEl);
             }
         } else {
-            // 新規ボタン作成
             const exportButton = document.createElement('button');
             exportButton.id = 'stj_export_button';
             exportButton.textContent = 'JSONデータ編集';
             exportButton.className = 'menu_button';
-            // キャプチャフェーズでクリックを先取り（他リスナーより先に実行）
             exportButton.addEventListener('click', handleExportButtonClick, true);
             buttonContainer.prepend(exportButton);
             stjButtonEl = exportButton;
         }
 
-        // モーダルが無ければ作成
         if (!stjModalEl || !document.body.contains(stjModalEl)) {
             createExportModal();
         }
@@ -349,7 +331,6 @@
     const applyBtnStyle = 'margin-top: 6px; padding: 6px 14px; font-size: 13px; font-weight: bold; color: #000000; background-color: #e0e0e0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; display: inline-block; width: fit-content;';
 
     function createExportModal() {
-        // 念のため既存のモーダルを除去
         const existingModal = document.getElementById('stj_export_modal');
         if (existingModal) existingModal.remove();
 
@@ -364,7 +345,6 @@
                 <div style="color: #ccc; font-size: 12px; margin-top: 5px;">※複数ファイルはカンマ区切りで入力（例: image1,video1,image2）</div>
             </div>
 
-            <!-- リアルタイムマッチングテスト用エリア（スクロール追従） -->
             <div id="stj_test_section" style="position: sticky; top: 0; z-index: 100; background: #1e1e1e; border: 1px solid #555; padding: 10px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.6);">
                 <label style="font-weight: bold; color: #64b5f6; display: block; margin-bottom: 5px;">
                     🔍 リアルタイムキーワード反応テスト
@@ -410,7 +390,7 @@
                 </div>
             </div>
             <div id="stj_keywords_container" class="stj-grid-container">
-                <div class="stj-keyword-item">
+                <div class="stj-keyword-item editing">
                     <div class="stj-image-preview" id="stj_preview_0" style="position: relative;">
                         <div class="stj-preview-text">プレビュー</div>
                     </div>
@@ -442,20 +422,46 @@
                     <button id="stj_export_json">JSON出力</button>
                 </div>
             </div>
+
+            <!-- 削除確認ダイアログ -->
+            <div id="stj_confirm_dialog">
+                <div class="stj-confirm-box">
+                    <div class="stj-confirm-message">本当に削除しますか？</div>
+                    <div class="stj-confirm-buttons">
+                        <button type="button" class="stj-confirm-yes">はい</button>
+                        <button type="button" class="stj-confirm-no">いいえ</button>
+                    </div>
+                </div>
+            </div>
         `;
         document.body.appendChild(modal);
         stjModalEl = modal;
+        confirmDialogEl = modal.querySelector('#stj_confirm_dialog');
 
-        // モーダル内のクリックは伝播させない
+        // 確認ダイアログのボタン
+        if (confirmDialogEl) {
+            confirmDialogEl.addEventListener('click', (e) => e.stopPropagation());
+            confirmDialogEl.querySelector('.stj-confirm-yes').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const cb = pendingDeleteCallback;
+                hideDeleteConfirmDialog();
+                if (typeof cb === 'function') {
+                    try { cb(); } catch (err) { console.error(err); }
+                }
+            });
+            confirmDialogEl.querySelector('.stj-confirm-no').addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideDeleteConfirmDialog();
+            });
+        }
+
         modal.addEventListener('click', (e) => e.stopPropagation());
 
-        // テスト入力欄
         const testInput = document.getElementById('stj_test_input');
         if (testInput) {
             testInput.addEventListener('input', runLiveTest);
         }
 
-        // キーワード追加
         const addBtn = document.getElementById('stj_add_keyword');
         if (addBtn) {
             addBtn.addEventListener('click', (e) => {
@@ -464,7 +470,6 @@
             });
         }
 
-        // キャンセル
         const cancelBtn = document.getElementById('stj_cancel_export');
         if (cancelBtn) {
             cancelBtn.addEventListener('click', (e) => {
@@ -473,7 +478,6 @@
             });
         }
 
-        // JSON出力
         const exportBtn = document.getElementById('stj_export_json');
         if (exportBtn) {
             exportBtn.addEventListener('click', (e) => {
@@ -482,7 +486,6 @@
             });
         }
 
-        // セーブ
         const saveBtn = document.getElementById('stj_save_data');
         if (saveBtn) {
             saveBtn.addEventListener('click', (e) => {
@@ -491,7 +494,6 @@
             });
         }
 
-        // デフォルト/サムネイル反映ボタン
         modal.querySelectorAll('.stj-apply-special').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -505,44 +507,55 @@
             });
         });
 
-        // 最初のキーワード行
         const firstItem = modal.querySelector('.stj-keyword-item');
         if (firstItem) {
             attachKeywordRowListeners(firstItem, 0);
         }
 
-        // ===== 外側クリックで閉じるハンドラ（一度だけ登録） =====
         if (!outsideClickHandlerInstalled) {
             outsideClickHandlerInstalled = true;
             document.addEventListener('mousedown', (e) => {
                 if (!stjModalEl) return;
                 if (stjModalEl.style.display !== 'block') return;
-                // 開いた直後は閉じない（イベント競合対策）
                 if (Date.now() - modalOpenedTimestamp < MODAL_OPEN_GUARD_MS) return;
-                // モーダル内クリックは無視
                 if (stjModalEl.contains(e.target)) return;
-                // 起動ボタンのクリックは無視
                 if (stjButtonEl && stjButtonEl.contains(e.target)) return;
                 closeExportModal();
-            }, true); // キャプチャフェーズ
+            }, true);
         }
     }
 
     function attachKeywordRowListeners(item, index) {
+        // ★ プレビュークリックで編集モードに入る
+        const previewEl = item.querySelector('.stj-image-preview');
+        if (previewEl) {
+            previewEl.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (!item.classList.contains('editing')) {
+                    item.classList.add('editing');
+                }
+            });
+        }
+
+        // ★ ❌ボタン：確認ダイアログを経てから削除
         const deleteButton = item.querySelector('.stj-delete-row');
         if (deleteButton) {
             deleteButton.addEventListener('click', function(e) {
                 e.stopPropagation();
-                item.remove();
-                runLiveTest();
+                showDeleteConfirmDialog(() => {
+                    item.remove();
+                    runLiveTest();
+                });
             });
         }
 
+        // ★ 反映ボタン：プレビュー更新後、編集モードを終了
         const applyButton = item.querySelector('.stj-apply-row');
         if (applyButton) {
             applyButton.addEventListener('click', function(e) {
                 e.stopPropagation();
                 updateSinglePreview(index);
+                item.classList.remove('editing');
             });
         }
 
@@ -613,7 +626,8 @@
         const container = modal.querySelector('#stj_keywords_container');
         const itemCount = container.querySelectorAll('.stj-keyword-item').length;
         const newItem = document.createElement('div');
-        newItem.className = 'stj-keyword-item';
+        // ★ 新規追加時は編集モードで出現
+        newItem.className = 'stj-keyword-item editing';
         newItem.innerHTML = `
             <div class="stj-image-preview" id="stj_preview_${itemCount}" style="position: relative;">
                 <div class="stj-preview-text">プレビュー</div>
@@ -756,9 +770,7 @@
 
             if (isVideoUrl(fullPath)) {
                 const vid = previewEl.querySelector('video');
-                if (vid) {
-                    vid.play().catch(() => {});
-                }
+                if (vid) vid.play().catch(() => {});
             }
 
             if (imageNames.length > 1) {
@@ -955,6 +967,7 @@
         }
     }
 
+    // ★ 読み込み時は表示モード（プレビューのみ）、.editing なし
     function addKeywordRowWithData(container, index, data) {
         const newItem = document.createElement('div');
         newItem.className = 'stj-keyword-item';
