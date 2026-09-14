@@ -17,6 +17,13 @@
     let pointerDragHandlerInstalled = false;
     const DRAG_THRESHOLD_PX = 5;
 
+    // ===== 自動スクロール関連 =====
+    const AUTOSCROLL_EDGE_PX = 70;       // 上下端から何px以内でスクロール開始するか
+    const AUTOSCROLL_MAX_SPEED = 22;     // 1フレームあたりの最大スクロール量(px)
+    let autoScrollRAF = null;
+    let autoScrollTarget = null;
+    let autoScrollDelta = 0;
+
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
         return !!url.match(/\.(mp4|webm)$/i);
@@ -277,6 +284,94 @@
         parent.removeChild(placeholder);
     }
 
+    // ===== 自動スクロール =====
+    function findScrollableAncestor(el) {
+        let cur = el ? el.parentElement : null;
+        while (cur && cur !== document.body && cur !== document.documentElement) {
+            const style = window.getComputedStyle(cur);
+            const oy = style.overflowY;
+            if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay')
+                && cur.scrollHeight > cur.clientHeight + 1) {
+                return cur;
+            }
+            cur = cur.parentElement;
+        }
+        // フォールバック：document のスクロール要素
+        return document.scrollingElement || document.documentElement;
+    }
+
+    function stopAutoScroll() {
+        if (autoScrollRAF) {
+            cancelAnimationFrame(autoScrollRAF);
+            autoScrollRAF = null;
+        }
+        autoScrollTarget = null;
+        autoScrollDelta = 0;
+    }
+
+    function autoScrollStep() {
+        autoScrollRAF = null;
+        if (!pointerDragState || !autoScrollTarget || autoScrollDelta === 0) return;
+
+        const before = autoScrollTarget.scrollTop;
+        autoScrollTarget.scrollTop = before + autoScrollDelta;
+
+        // スクロール後にカーソル下のセルを再検出してハイライトを更新
+        if (pointerDragState.isDragging) {
+            updateDragTarget(pointerDragState, pointerDragState.lastX, pointerDragState.lastY);
+        }
+
+        // まだ端にいるならループ継続
+        if (autoScrollTarget.scrollTop !== before || autoScrollDelta !== 0) {
+            autoScrollRAF = requestAnimationFrame(autoScrollStep);
+        }
+    }
+
+    function updateAutoScroll(container, cursorY) {
+        if (!container) {
+            stopAutoScroll();
+            return;
+        }
+        const rect = container.getBoundingClientRect();
+        const topDist = cursorY - rect.top;
+        const bottomDist = rect.bottom - cursorY;
+
+        let delta = 0;
+        if (topDist >= 0 && topDist < AUTOSCROLL_EDGE_PX) {
+            // 上端付近：上方向へスクロール（端に近いほど速い）
+            const ratio = (AUTOSCROLL_EDGE_PX - topDist) / AUTOSCROLL_EDGE_PX;
+            delta = -Math.ceil(ratio * AUTOSCROLL_MAX_SPEED);
+        } else if (bottomDist >= 0 && bottomDist < AUTOSCROLL_EDGE_PX) {
+            const ratio = (AUTOSCROLL_EDGE_PX - bottomDist) / AUTOSCROLL_EDGE_PX;
+            delta = Math.ceil(ratio * AUTOSCROLL_MAX_SPEED);
+        }
+
+        autoScrollTarget = container;
+        autoScrollDelta = delta;
+
+        if (delta !== 0) {
+            if (!autoScrollRAF) {
+                autoScrollRAF = requestAnimationFrame(autoScrollStep);
+            }
+        } else {
+            stopAutoScroll();
+        }
+    }
+
+    function updateDragTarget(s, x, y) {
+        const el = document.elementFromPoint(x, y);
+        const target = el && el.closest ? el.closest('.stj-keyword-item') : null;
+        const validTarget = (target && target !== s.sourceItem) ? target : null;
+
+        if (s.currentTarget && s.currentTarget !== validTarget) {
+            s.currentTarget.classList.remove('stj-drag-over');
+        }
+        s.currentTarget = validTarget;
+        if (validTarget) {
+            validTarget.classList.add('stj-drag-over');
+        }
+    }
+
     // ===== カスタムドラッグゴースト =====
     function createDragGhost(sourceItem, cursorX, cursorY) {
         const previewEl = sourceItem.querySelector('.stj-image-preview');
@@ -356,6 +451,9 @@
         document.addEventListener('mousemove', (e) => {
             if (!pointerDragState) return;
             const s = pointerDragState;
+            s.lastX = e.clientX;
+            s.lastY = e.clientY;
+
             const dx = e.clientX - s.startX;
             const dy = e.clientY - s.startY;
 
@@ -363,29 +461,25 @@
                 s.isDragging = true;
                 s.sourceItem.classList.add('stj-dragging');
                 s.ghostState = createDragGhost(s.sourceItem, e.clientX, e.clientY);
+                // ★ ドラッグ開始時にスクロール対象を確定
+                s.scrollContainer = findScrollableAncestor(s.sourceItem);
             }
 
             if (!s.isDragging) return;
 
             moveDragGhost(s.ghostState, e.clientX, e.clientY);
+            updateDragTarget(s, e.clientX, e.clientY);
 
-            const el = document.elementFromPoint(e.clientX, e.clientY);
-            const target = el && el.closest ? el.closest('.stj-keyword-item') : null;
-            const validTarget = (target && target !== s.sourceItem) ? target : null;
-
-            if (s.currentTarget && s.currentTarget !== validTarget) {
-                s.currentTarget.classList.remove('stj-drag-over');
-            }
-            s.currentTarget = validTarget;
-            if (validTarget) {
-                validTarget.classList.add('stj-drag-over');
-            }
+            // ★ 上下端付近で自動スクロール
+            updateAutoScroll(s.scrollContainer, e.clientY);
         });
 
         document.addEventListener('mouseup', () => {
             if (!pointerDragState) return;
             const s = pointerDragState;
             pointerDragState = null;
+
+            stopAutoScroll();
 
             if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
             if (s.currentTarget) s.currentTarget.classList.remove('stj-drag-over');
@@ -407,6 +501,7 @@
             if (!pointerDragState) return;
             const s = pointerDragState;
             pointerDragState = null;
+            stopAutoScroll();
             if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
             if (s.currentTarget) s.currentTarget.classList.remove('stj-drag-over');
             removeDragGhost(s.ghostState);
@@ -681,8 +776,6 @@
                 if (e.button !== 0) return;
                 if (item.classList.contains('editing')) return;
 
-                // ★ ボタン（またはその子孫）から発生した mousedown は無視
-                //   → 左右切り替えボタン本来の機能を保護し、編集モード移行を抑止
                 const target = e.target;
                 if (target && target.closest && target.closest('button')) {
                     return;
@@ -694,9 +787,12 @@
                     sourceItem: item,
                     startX: e.clientX,
                     startY: e.clientY,
+                    lastX: e.clientX,
+                    lastY: e.clientY,
                     isDragging: false,
                     currentTarget: null,
-                    ghostState: null
+                    ghostState: null,
+                    scrollContainer: null
                 };
             });
         }
@@ -721,17 +817,16 @@
             });
         }
 
-                const inputs = item.querySelectorAll('input');
+        const inputs = item.querySelectorAll('input');
         inputs.forEach(input => {
             input.addEventListener('input', runLiveTest);
             // ★ Enter キーで決定ボタンと同じ動作
             input.addEventListener('keydown', function(e) {
                 if (e.key !== 'Enter') return;
-                if (e.shiftKey) return;              // Shift+Enter は改行などに譲る
-                if (e.isComposing || e.keyCode === 229) return;  // IME 変換確定時は無視
+                if (e.shiftKey) return;
+                if (e.isComposing || e.keyCode === 229) return;
                 e.preventDefault();
                 e.stopPropagation();
-                // 決定ボタンと同一処理
                 updateSinglePreviewByItem(item);
                 item.classList.remove('editing');
             });
@@ -906,11 +1001,9 @@
         await updateImagePreview(previewEl.id, charName, imageInput.value);
     }
 
-    // ===== 左右切り替えボタン：mousedown/mouseup/click すべてで伝播を停止 =====
     function attachPreviewNavButtonGuards(btn) {
         const stopAll = (e) => {
             e.stopPropagation();
-            // mousedown はデフォルト動作も止めてフォーカス移動を防ぐ
             if (e.type === 'mousedown') {
                 e.preventDefault();
             }
@@ -969,14 +1062,14 @@
                 leftButton.style.left = '5px';
                 leftButton.style.top = '50%';
                 leftButton.style.transform = 'translateY(-50%)';
-                leftButton.style.zIndex = '25';  /* ★ ドラッグ判定・編集オーバーレイより前面 */
+                leftButton.style.zIndex = '25';
                 leftButton.style.background = 'rgba(0,0,0,0.65)';
                 leftButton.style.color = 'white';
                 leftButton.style.border = '2px solid rgba(255,255,255,0.6)';
                 leftButton.style.borderRadius = '4px';
                 leftButton.style.padding = '5px 10px';
                 leftButton.style.cursor = 'pointer';
-                leftButton.style.pointerEvents = 'auto'; /* 明示 */
+                leftButton.style.pointerEvents = 'auto';
                 attachPreviewNavButtonGuards(leftButton);
                 leftButton.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -992,14 +1085,14 @@
                 rightButton.style.right = '5px';
                 rightButton.style.top = '50%';
                 rightButton.style.transform = 'translateY(-50%)';
-                rightButton.style.zIndex = '25';  /* ★ */
+                rightButton.style.zIndex = '25';
                 rightButton.style.background = 'rgba(0,0,0,0.65)';
                 rightButton.style.color = 'white';
                 rightButton.style.border = '2px solid rgba(255,255,255,0.6)';
                 rightButton.style.borderRadius = '4px';
                 rightButton.style.padding = '5px 10px';
                 rightButton.style.cursor = 'pointer';
-                rightButton.style.pointerEvents = 'auto'; /* 明示 */
+                rightButton.style.pointerEvents = 'auto';
                 attachPreviewNavButtonGuards(rightButton);
                 rightButton.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1019,7 +1112,7 @@
                 indexDisplay.style.padding = '2px 8px';
                 indexDisplay.style.borderRadius = '3px';
                 indexDisplay.style.fontSize = '12px';
-                indexDisplay.style.pointerEvents = 'none'; /* 番号表示は透過 */
+                indexDisplay.style.pointerEvents = 'none';
                 indexDisplay.textContent = `${currentIndex + 1}/${imageNames.length}`;
                 previewEl.appendChild(indexDisplay);
             }
