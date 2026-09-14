@@ -13,7 +13,6 @@
     let confirmDialogEl = null;
     let pendingDeleteCallback = null;
 
-    // ===== カスタムドラッグ =====
     let pointerDragState = null;
     let pointerDragHandlerInstalled = false;
     const DRAG_THRESHOLD_PX = 5;
@@ -278,7 +277,7 @@
         parent.removeChild(placeholder);
     }
 
-    // ===== カスタムドラッグゴーストの生成・追従・破棄 =====
+    // ===== カスタムドラッグゴースト =====
     function createDragGhost(sourceItem, cursorX, cursorY) {
         const previewEl = sourceItem.querySelector('.stj-image-preview');
         if (!previewEl) return null;
@@ -288,8 +287,6 @@
         const ghost = document.createElement('div');
         ghost.className = 'stj-drag-ghost';
 
-        // セル番号を取得（::after の content を読み取れないため、
-        // grid 内のインデックスから算出する）
         const container = sourceItem.parentNode;
         if (container) {
             const items = Array.from(container.querySelectorAll('.stj-keyword-item'));
@@ -297,7 +294,6 @@
             ghost.dataset.cellNum = String(num);
         }
 
-        // プレビュー内の img / video を複製
         const media = previewEl.querySelector('img, video');
         if (media) {
             const cloned = media.cloneNode(true);
@@ -316,7 +312,6 @@
             }
             ghost.appendChild(cloned);
         } else {
-            // メディア未設定なら「プレビュー」ラベルを表示
             const fallback = document.createElement('div');
             fallback.textContent = 'プレビュー';
             fallback.style.position = 'absolute';
@@ -329,7 +324,6 @@
             ghost.appendChild(fallback);
         }
 
-        // ゴーストの位置を、掴んだプレビュー内の相対位置に合わせて初期化
         ghost.style.width = rect.width + 'px';
         ghost.style.height = rect.height + 'px';
         const offsetX = cursorX - rect.left;
@@ -339,11 +333,7 @@
 
         document.body.appendChild(ghost);
 
-        return {
-            el: ghost,
-            offsetX,
-            offsetY
-        };
+        return { el: ghost, offsetX, offsetY };
     }
 
     function moveDragGhost(ghostState, cursorX, cursorY) {
@@ -359,7 +349,6 @@
         }
     }
 
-    // ===== document に一度だけ登録する Pointer ハンドラ =====
     function installPointerDragHandlers() {
         if (pointerDragHandlerInstalled) return;
         pointerDragHandlerInstalled = true;
@@ -370,7 +359,6 @@
             const dx = e.clientX - s.startX;
             const dy = e.clientY - s.startY;
 
-            // 閾値を超えた瞬間にドラッグ開始とゴースト生成
             if (!s.isDragging && (dx * dx + dy * dy) > (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) {
                 s.isDragging = true;
                 s.sourceItem.classList.add('stj-dragging');
@@ -379,10 +367,8 @@
 
             if (!s.isDragging) return;
 
-            // ゴースト追従
             moveDragGhost(s.ghostState, e.clientX, e.clientY);
 
-            // カーソル下のセルを検出して赤枠ハイライト
             const el = document.elementFromPoint(e.clientX, e.clientY);
             const target = el && el.closest ? el.closest('.stj-keyword-item') : null;
             const validTarget = (target && target !== s.sourceItem) ? target : null;
@@ -411,14 +397,12 @@
                     runLiveTest();
                 }
             } else {
-                // クリック扱い：編集モードへ
                 if (s.sourceItem && !s.sourceItem.classList.contains('editing')) {
                     s.sourceItem.classList.add('editing');
                 }
             }
         });
 
-        // 念のため：ドラッグ中にウィンドウ外で離した場合の後始末
         window.addEventListener('blur', () => {
             if (!pointerDragState) return;
             const s = pointerDragState;
@@ -696,6 +680,14 @@
             previewEl.addEventListener('mousedown', function(e) {
                 if (e.button !== 0) return;
                 if (item.classList.contains('editing')) return;
+
+                // ★ ボタン（またはその子孫）から発生した mousedown は無視
+                //   → 左右切り替えボタン本来の機能を保護し、編集モード移行を抑止
+                const target = e.target;
+                if (target && target.closest && target.closest('button')) {
+                    return;
+                }
+
                 e.preventDefault();
                 e.stopPropagation();
                 pointerDragState = {
@@ -903,6 +895,20 @@
         await updateImagePreview(previewEl.id, charName, imageInput.value);
     }
 
+    // ===== 左右切り替えボタン：mousedown/mouseup/click すべてで伝播を停止 =====
+    function attachPreviewNavButtonGuards(btn) {
+        const stopAll = (e) => {
+            e.stopPropagation();
+            // mousedown はデフォルト動作も止めてフォーカス移動を防ぐ
+            if (e.type === 'mousedown') {
+                e.preventDefault();
+            }
+        };
+        btn.addEventListener('mousedown', stopAll);
+        btn.addEventListener('mouseup', stopAll);
+        btn.addEventListener('dblclick', stopAll);
+    }
+
     async function updateImagePreview(previewId, charName, rawValue, targetIndex = 0) {
         const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
@@ -947,38 +953,46 @@
             if (imageNames.length > 1) {
                 const leftButton = document.createElement('button');
                 leftButton.innerHTML = '←';
+                leftButton.type = 'button';
                 leftButton.style.position = 'absolute';
                 leftButton.style.left = '5px';
                 leftButton.style.top = '50%';
                 leftButton.style.transform = 'translateY(-50%)';
-                leftButton.style.zIndex = '10';
-                leftButton.style.background = 'rgba(0,0,0,0.5)';
+                leftButton.style.zIndex = '25';  /* ★ ドラッグ判定・編集オーバーレイより前面 */
+                leftButton.style.background = 'rgba(0,0,0,0.65)';
                 leftButton.style.color = 'white';
-                leftButton.style.border = 'none';
-                leftButton.style.borderRadius = '3px';
+                leftButton.style.border = '2px solid rgba(255,255,255,0.6)';
+                leftButton.style.borderRadius = '4px';
                 leftButton.style.padding = '5px 10px';
                 leftButton.style.cursor = 'pointer';
+                leftButton.style.pointerEvents = 'auto'; /* 明示 */
+                attachPreviewNavButtonGuards(leftButton);
                 leftButton.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     updateImagePreview(previewId, charName, rawValue, currentIndex - 1);
                 });
                 previewEl.appendChild(leftButton);
 
                 const rightButton = document.createElement('button');
                 rightButton.innerHTML = '→';
+                rightButton.type = 'button';
                 rightButton.style.position = 'absolute';
                 rightButton.style.right = '5px';
                 rightButton.style.top = '50%';
                 rightButton.style.transform = 'translateY(-50%)';
-                rightButton.style.zIndex = '10';
-                rightButton.style.background = 'rgba(0,0,0,0.5)';
+                rightButton.style.zIndex = '25';  /* ★ */
+                rightButton.style.background = 'rgba(0,0,0,0.65)';
                 rightButton.style.color = 'white';
-                rightButton.style.border = 'none';
-                rightButton.style.borderRadius = '3px';
+                rightButton.style.border = '2px solid rgba(255,255,255,0.6)';
+                rightButton.style.borderRadius = '4px';
                 rightButton.style.padding = '5px 10px';
                 rightButton.style.cursor = 'pointer';
+                rightButton.style.pointerEvents = 'auto'; /* 明示 */
+                attachPreviewNavButtonGuards(rightButton);
                 rightButton.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     updateImagePreview(previewId, charName, rawValue, currentIndex + 1);
                 });
                 previewEl.appendChild(rightButton);
@@ -988,12 +1002,13 @@
                 indexDisplay.style.bottom = '5px';
                 indexDisplay.style.left = '50%';
                 indexDisplay.style.transform = 'translateX(-50%)';
-                indexDisplay.style.zIndex = '10';
-                indexDisplay.style.background = 'rgba(0,0,0,0.5)';
+                indexDisplay.style.zIndex = '25';
+                indexDisplay.style.background = 'rgba(0,0,0,0.65)';
                 indexDisplay.style.color = 'white';
                 indexDisplay.style.padding = '2px 8px';
                 indexDisplay.style.borderRadius = '3px';
                 indexDisplay.style.fontSize = '12px';
+                indexDisplay.style.pointerEvents = 'none'; /* 番号表示は透過 */
                 indexDisplay.textContent = `${currentIndex + 1}/${imageNames.length}`;
                 previewEl.appendChild(indexDisplay);
             }
