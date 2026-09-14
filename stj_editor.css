@@ -116,7 +116,12 @@
 .stj-extension-width {
   flex: 1;
 }
+
+/* ===== ❌削除ボタン（コンテナ左上に絶対配置） ===== */
 .stj-delete-row {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 35px;
   height: 35px;
   padding: 0;
@@ -129,10 +134,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   font-size: 16px;
-  align-self: flex-start;
-  margin-top: 0;
+  z-index: 5;
 }
 
 /* セーブボタンのスタイル */
@@ -203,7 +206,9 @@
   font-weight: bold;
 }
 
+/* ===== 入力エリア（削除ボタン分の上余白を確保） ===== */
 .stj-inputs-container {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -211,6 +216,8 @@
   gap: 15px;
   justify-content: center;
   height: 100%;
+  padding-top: 40px;
+  box-sizing: border-box;
 }
 .stj-input-row {
   display: flex;
