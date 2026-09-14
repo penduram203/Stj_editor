@@ -229,18 +229,18 @@
   min-width: 0;
 }
 
-/* ===== デフォルト/サムネイル（3列グリッド、上部ラベル付き） ===== */
+/* ===== デフォルト/サムネイル（3列グリッド、セル内上部ラベル付き） ===== */
 .stj-special-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 25px;
-  padding-top: 50px; /* ラベル表示用の余白 */
   position: relative;
 }
 .stj-special-item {
   display: flex;
-  padding: 10px 8px;
+  /* ラベル分の上部余白を確保（上: 40px、左右下: 通常） */
+  padding: 40px 8px 10px 8px;
   background-color: #1a202c;
   border-radius: 8px;
   gap: 6px;
@@ -250,19 +250,19 @@
   position: relative; /* ラベル絶対配置の基準 */
 }
 
-/* ===== セル上部のラベル（太字・縁取り・大きめフォント） ===== */
+/* ===== セル内側上部のラベル（白文字 + 黒縁取り + 太字） ===== */
 .stj-special-item:nth-child(1)::before,
 .stj-special-item:nth-child(2)::before {
   position: absolute;
-  top: -42px;
+  top: 8px;         /* セル内側の上端から8px */
   left: 0;
   right: 0;
   text-align: center;
   font-size: 22px;
   font-weight: 900;
   letter-spacing: 2px;
-  color: #64b5f6;
-  -webkit-text-stroke: 1px #000000;
+  color: #ffffff;                    /* 白文字 */
+  -webkit-text-stroke: 1px #000000;  /* 黒縁取り（WebKit系） */
   text-shadow:
     -2px -2px 0 #000000, 2px -2px 0 #000000,
     -2px  2px 0 #000000, 2px  2px 0 #000000,
@@ -356,6 +356,10 @@
     padding: 15px;
     gap: 15px;
   }
+  /* 2列時もラベル位置は維持するため top padding を保持 */
+  .stj-special-item {
+    padding-top: 40px;
+  }
   .stj-input-row {
     gap: 8px;
   }
@@ -377,6 +381,10 @@
     gap: 15px;
     align-items: center;
     min-height: auto;
+  }
+  /* 縦型時もラベル分の上余白を保持 */
+  .stj-special-item {
+    padding-top: 40px;
   }
   .stj-image-preview {
     width: 100%;
