@@ -229,12 +229,14 @@
   min-width: 0;
 }
 
-/* ===== デフォルト/サムネイル（3列グリッド） ===== */
+/* ===== デフォルト/サムネイル（3列グリッド、上部ラベル付き） ===== */
 .stj-special-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 25px;
+  padding-top: 50px; /* ラベル表示用の余白 */
+  position: relative;
 }
 .stj-special-item {
   display: flex;
@@ -245,7 +247,39 @@
   align-items: center;
   min-height: 230px;
   box-sizing: border-box;
+  position: relative; /* ラベル絶対配置の基準 */
 }
+
+/* ===== セル上部のラベル（太字・縁取り・大きめフォント） ===== */
+.stj-special-item:nth-child(1)::before,
+.stj-special-item:nth-child(2)::before {
+  position: absolute;
+  top: -42px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #64b5f6;
+  -webkit-text-stroke: 1px #000000;
+  text-shadow:
+    -2px -2px 0 #000000, 2px -2px 0 #000000,
+    -2px  2px 0 #000000, 2px  2px 0 #000000,
+    -2px  0   0 #000000, 2px  0   0 #000000,
+     0   -2px 0 #000000, 0    2px 0 #000000,
+     0    0   8px rgba(0, 0, 0, 0.9);
+  z-index: 6;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.stj-special-item:nth-child(1)::before {
+  content: "デフォルト表示";
+}
+.stj-special-item:nth-child(2)::before {
+  content: "サムネイル表示";
+}
+
 .stj-special-preview {
   flex-shrink: 0;
 }
@@ -356,4 +390,9 @@
   #stj_export_modal { left: 0; width: 100vw; padding: 10px; }
   .stj-button-group { flex-direction: column; gap: 10px; }
   .stj-button-group > div { justify-content: center; }
+  /* ラベルも少し縮小 */
+  .stj-special-item:nth-child(1)::before,
+  .stj-special-item:nth-child(2)::before {
+    font-size: 18px;
+  }
 }
