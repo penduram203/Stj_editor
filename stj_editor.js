@@ -21,7 +21,7 @@
     const DRAG_THRESHOLD_PX = 5;
 
     // ===== 自動スクロール =====
-    const AUTOSCROLL_EDGE_PX = 150;    // ★ 70 → 150：早めにスクロール開始
+    const AUTOSCROLL_EDGE_PX = 200;    // ★ 150 → 200：早めにスクロール開始
     const AUTOSCROLL_MAX_SPEED = 35;   // ★ 45 → 35
     let autoScrollRAF = null;
     let autoScrollTarget = null;
@@ -930,7 +930,7 @@
     }
 
     // ===== 一括削除の実行フロー =====
-    // ★ メッセージダイアログを廃止し、直接確認ダイアログを表示
+    // ★ メッセージダイアログを1秒表示 → 確認ダイアログ
     function executeBulkDelete() {
         const marked = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
         if (marked.length === 0) return;
@@ -942,26 +942,33 @@
         if (delCancelBtn) delCancelBtn.disabled = true;
         if (delExecBtn) delExecBtn.disabled = true;
 
-        // 直接確認ダイアログを表示
-        showDeleteConfirmDialog(
-            '本当に一括削除しますか？',
-            // はい：削除実行
-            () => {
-                isDialogActive = false;
-                if (delCancelBtn) delCancelBtn.disabled = false;
-                if (delExecBtn) delExecBtn.disabled = false;
+        // 1秒間メッセージを表示
+        showMessageDialog('選択されたセルを一括削除します');
 
-                const targets = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
-                targets.forEach(el => el.remove());
-                runLiveTest();
-            },
-            // いいえ：選択状態を保持したまま復帰
-            () => {
-                isDialogActive = false;
-                if (delCancelBtn) delCancelBtn.disabled = false;
-                if (delExecBtn) delExecBtn.disabled = false;
-            }
-        );
+        setTimeout(() => {
+            hideMessageDialog();
+
+            // 確認ダイアログを表示
+            showDeleteConfirmDialog(
+                '本当に一括削除しますか？',
+                // はい：削除実行
+                () => {
+                    isDialogActive = false;
+                    if (delCancelBtn) delCancelBtn.disabled = false;
+                    if (delExecBtn) delExecBtn.disabled = false;
+
+                    const targets = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
+                    targets.forEach(el => el.remove());
+                    runLiveTest();
+                },
+                // いいえ：選択状態を保持したまま復帰
+                () => {
+                    isDialogActive = false;
+                    if (delCancelBtn) delCancelBtn.disabled = false;
+                    if (delExecBtn) delExecBtn.disabled = false;
+                }
+            );
+        }, 1000);
     }
 
     function attachKeywordRowListeners(item, index) {
