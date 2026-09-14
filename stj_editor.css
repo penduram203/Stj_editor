@@ -20,13 +20,13 @@
   background-color: #2d3748;
 }
 
-/* モーダルウィンドウスタイル */
+/* モーダルウィンドウスタイル（左右に50pxずつ拡張） */
 #stj_export_modal {
   display: none;
   position: fixed;
   top: 0;
-  left: 10px;
-  width: calc(100vw - 20px);
+  left: -40px;                     /* 10px - 50px */
+  width: calc(100vw + 80px);       /* (100vw - 20px) + 100px */
   height: 100vh;
   background-color: #2d3748;
   border: 1px solid #4a5568;
@@ -35,6 +35,7 @@
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   z-index: 10001;
   overflow-y: auto;
+  overflow-x: hidden;
   box-sizing: border-box;
 }
 
@@ -112,6 +113,8 @@
   column-gap: 0;      /* 横方向の余白ゼロ */
   row-gap: 8px;       /* 縦方向の余白のみ確保 */
   justify-content: center;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .stj-keyword-width {
@@ -284,6 +287,7 @@
   margin-bottom: 25px;
   position: relative;
   justify-items: center;
+  width: 100%;
 }
 .stj-special-item {
   display: flex;
@@ -447,28 +451,23 @@
 }
 
 /* ===== レスポンシブ：画面幅に応じてキーワード列数を段階的に減少 ===== */
-/* 8列: 8×200 + モーダル余白40 = 1640px → 1660px */
+/* 8列: 8×200 + 拡張後のモーダル余白 = 1640px → 1660px */
 @media (max-width: 1660px) {
   .stj-grid-container { grid-template-columns: repeat(7, 200px); }
 }
-/* 7列: 7×200 + 40 = 1440px → 1460px */
 @media (max-width: 1460px) {
   .stj-grid-container { grid-template-columns: repeat(6, 200px); }
 }
-/* 6列: 6×200 + 40 = 1240px → 1260px */
 @media (max-width: 1260px) {
   .stj-grid-container { grid-template-columns: repeat(5, 200px); }
 }
-/* 5列: 5×200 + 40 = 1040px → 1060px */
 @media (max-width: 1060px) {
   .stj-grid-container { grid-template-columns: repeat(4, 200px); }
   .stj-special-container { grid-template-columns: repeat(2, 1fr); }
 }
-/* 4列: 4×200 + 40 = 840px → 860px */
 @media (max-width: 860px) {
   .stj-grid-container { grid-template-columns: repeat(3, 200px); }
 }
-/* 3列: 3×200 + 40 = 640px → 660px */
 @media (max-width: 660px) {
   .stj-grid-container { grid-template-columns: repeat(2, 200px); }
   .stj-special-container { grid-template-columns: 1fr; }
@@ -479,7 +478,6 @@
     font-size: 16px;
   }
 }
-/* 2列の下限を割る場合: 2×200 + 40 = 440px → 460px */
 @media (max-width: 460px) {
   .stj-grid-container { grid-template-columns: 1fr; }
 }
