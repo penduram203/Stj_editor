@@ -20,13 +20,15 @@
   background-color: #2d3748;
 }
 
-/* モーダルウィンドウスタイル（左右に50pxずつ拡張） */
+/* ===== モーダルウィンドウ（8セル分の最小幅を保証） ===== */
 #stj_export_modal {
   display: none;
   position: fixed;
   top: 0;
-  left: -40px;                     /* 10px - 50px */
-  width: calc(100vw + 80px);       /* (100vw - 20px) + 100px */
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: max(calc(100vw + 80px), 1660px); /* 8×200 + padding + 余裕 */
   height: 100vh;
   background-color: #2d3748;
   border: 1px solid #4a5568;
@@ -35,7 +37,7 @@
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   z-index: 10001;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   box-sizing: border-box;
 }
 
@@ -106,15 +108,15 @@
   overflow: hidden;
 }
 
-/* ===== キーワードグリッド（デフォルト8列、横方向ギャップ0） ===== */
+/* ===== キーワードグリッド（8列、コンテンツ幅に自然拡張） ===== */
 .stj-grid-container {
   display: grid;
   grid-template-columns: repeat(8, 200px);
-  column-gap: 0;      /* 横方向の余白ゼロ */
-  row-gap: 8px;       /* 縦方向の余白のみ確保 */
-  justify-content: center;
-  width: 100%;
-  overflow-x: hidden;
+  column-gap: 0;              /* 横方向の余白ゼロ */
+  row-gap: 8px;               /* 縦方向の余白のみ確保 */
+  width: max-content;         /* セル合計幅ぶんだけ広がる */
+  min-width: 1600px;          /* 8×200px を下回らない */
+  margin: 0 auto;             /* モーダル内で中央寄せ */
 }
 
 .stj-keyword-width {
@@ -450,26 +452,26 @@
   background-color: #2d3748;
 }
 
-/* ===== レスポンシブ：画面幅に応じてキーワード列数を段階的に減少 ===== */
-/* 8列: 8×200 + 拡張後のモーダル余白 = 1640px → 1660px */
+/* ===== レスポンシブ ===== */
+/* 8列の下限: 8×200 + padding 40 = 1640px → 余裕を見て 1660px */
 @media (max-width: 1660px) {
-  .stj-grid-container { grid-template-columns: repeat(7, 200px); }
+  .stj-grid-container { grid-template-columns: repeat(7, 200px); min-width: 1400px; }
 }
 @media (max-width: 1460px) {
-  .stj-grid-container { grid-template-columns: repeat(6, 200px); }
+  .stj-grid-container { grid-template-columns: repeat(6, 200px); min-width: 1200px; }
 }
 @media (max-width: 1260px) {
-  .stj-grid-container { grid-template-columns: repeat(5, 200px); }
+  .stj-grid-container { grid-template-columns: repeat(5, 200px); min-width: 1000px; }
 }
 @media (max-width: 1060px) {
-  .stj-grid-container { grid-template-columns: repeat(4, 200px); }
+  .stj-grid-container { grid-template-columns: repeat(4, 200px); min-width: 800px; }
   .stj-special-container { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 860px) {
-  .stj-grid-container { grid-template-columns: repeat(3, 200px); }
+  .stj-grid-container { grid-template-columns: repeat(3, 200px); min-width: 600px; }
 }
 @media (max-width: 660px) {
-  .stj-grid-container { grid-template-columns: repeat(2, 200px); }
+  .stj-grid-container { grid-template-columns: repeat(2, 200px); min-width: 400px; }
   .stj-special-container { grid-template-columns: 1fr; }
   .stj-button-group { flex-direction: column; gap: 10px; }
   .stj-button-group > div { justify-content: center; }
@@ -479,5 +481,5 @@
   }
 }
 @media (max-width: 460px) {
-  .stj-grid-container { grid-template-columns: 1fr; }
+  .stj-grid-container { grid-template-columns: 1fr; min-width: 200px; }
 }
