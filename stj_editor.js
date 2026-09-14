@@ -12,17 +12,24 @@
 
     let confirmDialogEl = null;
     let pendingDeleteCallback = null;
+    let pendingCancelCallback = null;
+
+    let messageDialogEl = null;
 
     let pointerDragState = null;
     let pointerDragHandlerInstalled = false;
     const DRAG_THRESHOLD_PX = 5;
 
-    // ===== 自動スクロール関連 =====
-    const AUTOSCROLL_EDGE_PX = 70;       // 上下端から何px以内でスクロール開始するか
-    const AUTOSCROLL_MAX_SPEED = 22;     // 1フレームあたりの最大スクロール量(px)
+    // ===== 自動スクロール（速度 UP） =====
+    const AUTOSCROLL_EDGE_PX = 70;
+    const AUTOSCROLL_MAX_SPEED = 35;   // ★ 22 → 35
     let autoScrollRAF = null;
     let autoScrollTarget = null;
     let autoScrollDelta = 0;
+
+    // ===== 一括削除モード =====
+    let isBulkDeleteMode = false;
+    let isDialogActive = false;
 
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
@@ -261,9 +268,11 @@
         );
     }
 
-    function showDeleteConfirmDialog(onConfirm) {
+    // ===== ダイアログ =====
+    function showDeleteConfirmDialog(onConfirm, onCancel) {
         if (!confirmDialogEl) return;
         pendingDeleteCallback = onConfirm;
+        pendingCancelCallback = onCancel || null;
         confirmDialogEl.style.display = 'flex';
     }
 
@@ -271,6 +280,19 @@
         if (!confirmDialogEl) return;
         confirmDialogEl.style.display = 'none';
         pendingDeleteCallback = null;
+        pendingCancelCallback = null;
+    }
+
+    function showMessageDialog(text) {
+        if (!messageDialogEl) return;
+        const textEl = messageDialogEl.querySelector('.stj-message-text');
+        if (textEl) textEl.textContent = text;
+        messageDialogEl.style.display = 'flex';
+    }
+
+    function hideMessageDialog() {
+        if (!messageDialogEl) return;
+        messageDialogEl.style.display = 'none';
     }
 
     function swapCells(a, b) {
@@ -296,7 +318,6 @@
             }
             cur = cur.parentElement;
         }
-        // フォールバック：document のスクロール要素
         return document.scrollingElement || document.documentElement;
     }
 
@@ -316,12 +337,10 @@
         const before = autoScrollTarget.scrollTop;
         autoScrollTarget.scrollTop = before + autoScrollDelta;
 
-        // スクロール後にカーソル下のセルを再検出してハイライトを更新
         if (pointerDragState.isDragging) {
             updateDragTarget(pointerDragState, pointerDragState.lastX, pointerDragState.lastY);
         }
 
-        // まだ端にいるならループ継続
         if (autoScrollTarget.scrollTop !== before || autoScrollDelta !== 0) {
             autoScrollRAF = requestAnimationFrame(autoScrollStep);
         }
@@ -338,7 +357,6 @@
 
         let delta = 0;
         if (topDist >= 0 && topDist < AUTOSCROLL_EDGE_PX) {
-            // 上端付近：上方向へスクロール（端に近いほど速い）
             const ratio = (AUTOSCROLL_EDGE_PX - topDist) / AUTOSCROLL_EDGE_PX;
             delta = -Math.ceil(ratio * AUTOSCROLL_MAX_SPEED);
         } else if (bottomDist >= 0 && bottomDist < AUTOSCROLL_EDGE_PX) {
@@ -372,7 +390,7 @@
         }
     }
 
-    // ===== カスタムドラッグゴースト =====
+    // ===== ドラッグゴースト =====
     function createDragGhost(sourceItem, cursorX, cursorY) {
         const previewEl = sourceItem.querySelector('.stj-image-preview');
         if (!previewEl) return null;
@@ -458,11 +476,12 @@
             const dy = e.clientY - s.startY;
 
             if (!s.isDragging && (dx * dx + dy * dy) > (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) {
+                // 一括削除モード中はドラッグしない
+                if (s.isBulkDelete) return;
                 s.isDragging = true;
                 s.sourceItem.classList.add('stj-dragging');
                 s.ghostState = createDragGhost(s.sourceItem, e.clientX, e.clientY);
                 s.scrollContainer = findScrollableAncestor(s.sourceItem);
-                // ★ ドラッグ中はテスト枠を無視するクラスを付与
                 if (stjModalEl) stjModalEl.classList.add('stj-drag-active');
             }
 
@@ -479,7 +498,6 @@
             pointerDragState = null;
 
             stopAutoScroll();
-            // ★ ドラッグ終了：テスト枠を元に戻す
             if (stjModalEl) stjModalEl.classList.remove('stj-drag-active');
 
             if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
@@ -492,8 +510,20 @@
                     runLiveTest();
                 }
             } else {
-                if (s.sourceItem && !s.sourceItem.classList.contains('editing')) {
-                    s.sourceItem.classList.add('editing');
+                const src = s.sourceItem;
+                if (!src) return;
+                // 一括削除モード中のクリック → 削除候補のトグル
+                if (s.isBulkDelete || isBulkDeleteMode) {
+                    if (src.classList.contains('stj-marked-for-delete')) {
+                        src.classList.remove('stj-marked-for-delete');
+                    } else {
+                        src.classList.add('stj-marked-for-delete');
+                    }
+                    return;
+                }
+                // 通常モード → 編集モードへ
+                if (!src.classList.contains('editing')) {
+                    src.classList.add('editing');
                 }
             }
         });
@@ -503,11 +533,82 @@
             const s = pointerDragState;
             pointerDragState = null;
             stopAutoScroll();
-            // ★ ドラッグ強制終了時もクラスを除去
             if (stjModalEl) stjModalEl.classList.remove('stj-drag-active');
             if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
             if (s.currentTarget) s.currentTarget.classList.remove('stj-drag-over');
             removeDragGhost(s.ghostState);
+        });
+    }
+
+    // ===== 一括削除モード =====
+    function enterBulkDeleteMode() {
+        if (isBulkDeleteMode) return;
+        isBulkDeleteMode = true;
+
+        // 編集中のセルを閉じる
+        document.querySelectorAll('.stj-keyword-item.editing').forEach(el => {
+            el.classList.remove('editing');
+        });
+
+        if (stjModalEl) stjModalEl.classList.add('stj-bulk-delete-mode');
+
+        const addBtn = document.getElementById('stj_add_keyword');
+        const bulkBtn = document.getElementById('stj_bulk_delete');
+        const delCancelBtn = document.getElementById('stj_delete_cancel');
+        const delExecBtn = document.getElementById('stj_delete_execute');
+        const saveBtn = document.getElementById('stj_save_data');
+        const cancelBtn = document.getElementById('stj_cancel_export');
+        const exportBtn = document.getElementById('stj_export_json');
+
+        if (addBtn) addBtn.style.display = 'none';
+        if (bulkBtn) bulkBtn.style.display = 'none';
+        if (delCancelBtn) delCancelBtn.style.display = '';
+        if (delExecBtn) delExecBtn.style.display = '';
+
+        if (saveBtn) saveBtn.disabled = true;
+        if (cancelBtn) cancelBtn.disabled = true;
+        if (exportBtn) exportBtn.disabled = true;
+
+        // 決定/キャンセルボタンも一括削除モードでは反応しないよう無効化
+        document.querySelectorAll('.stj-keyword-item .stj-apply-row, .stj-keyword-item .stj-delete-row').forEach(btn => {
+            btn.disabled = true;
+        });
+    }
+
+    function exitBulkDeleteMode() {
+        if (!isBulkDeleteMode) return;
+        isBulkDeleteMode = false;
+        isDialogActive = false;
+
+        // 全削除候補マークを除去
+        document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete').forEach(el => {
+            el.classList.remove('stj-marked-for-delete');
+        });
+
+        hideMessageDialog();
+        hideDeleteConfirmDialog();
+
+        if (stjModalEl) stjModalEl.classList.remove('stj-bulk-delete-mode');
+
+        const addBtn = document.getElementById('stj_add_keyword');
+        const bulkBtn = document.getElementById('stj_bulk_delete');
+        const delCancelBtn = document.getElementById('stj_delete_cancel');
+        const delExecBtn = document.getElementById('stj_delete_execute');
+        const saveBtn = document.getElementById('stj_save_data');
+        const cancelBtn = document.getElementById('stj_cancel_export');
+        const exportBtn = document.getElementById('stj_export_json');
+
+        if (addBtn) addBtn.style.display = '';
+        if (bulkBtn) bulkBtn.style.display = '';
+        if (delCancelBtn) delCancelBtn.style.display = 'none';
+        if (delExecBtn) delExecBtn.style.display = 'none';
+
+        if (saveBtn) saveBtn.disabled = false;
+        if (cancelBtn) cancelBtn.disabled = false;
+        if (exportBtn) exportBtn.disabled = false;
+
+        document.querySelectorAll('.stj-keyword-item .stj-apply-row, .stj-keyword-item .stj-delete-row').forEach(btn => {
+            btn.disabled = false;
         });
     }
 
@@ -572,6 +673,8 @@
 
     function closeExportModal() {
         if (!stjModalEl) return;
+        // 一括削除モード中・ダイアログ表示中はモーダルを閉じさせない
+        if (isBulkDeleteMode || isDialogActive) return;
         stjModalEl.style.display = 'none';
     }
 
@@ -662,8 +765,13 @@
                 </div>
             </div>
             <div class="stj-button-group">
-                <button id="stj_add_keyword">キーワード追加</button>
-                <div>
+                <div class="stj-button-group-left">
+                    <button id="stj_add_keyword">キーワード追加</button>
+                    <button id="stj_bulk_delete">一括削除</button>
+                    <button id="stj_delete_cancel" style="display:none;">削除キャンセル</button>
+                    <button id="stj_delete_execute" style="display:none;">削除実行</button>
+                </div>
+                <div class="stj-button-group-right">
                     <button id="stj_save_data">セーブ</button>
                     <button id="stj_cancel_export">キャンセル</button>
                     <button id="stj_export_json">JSON出力</button>
@@ -679,11 +787,19 @@
                     </div>
                 </div>
             </div>
+
+            <div id="stj_message_dialog">
+                <div class="stj-message-box">
+                    <div class="stj-message-text"></div>
+                </div>
+            </div>
         `;
         document.body.appendChild(modal);
         stjModalEl = modal;
         confirmDialogEl = modal.querySelector('#stj_confirm_dialog');
+        messageDialogEl = modal.querySelector('#stj_message_dialog');
 
+        // 確認ダイアログ
         if (confirmDialogEl) {
             confirmDialogEl.addEventListener('click', (e) => e.stopPropagation());
             confirmDialogEl.querySelector('.stj-confirm-yes').addEventListener('click', (e) => {
@@ -696,7 +812,19 @@
             });
             confirmDialogEl.querySelector('.stj-confirm-no').addEventListener('click', (e) => {
                 e.stopPropagation();
+                const cancelCb = pendingCancelCallback;
                 hideDeleteConfirmDialog();
+                if (typeof cancelCb === 'function') {
+                    try { cancelCb(); } catch (err) { console.error(err); }
+                }
+            });
+        }
+
+        // メッセージダイアログはクリックをすべて飲み込む
+        if (messageDialogEl) {
+            messageDialogEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
             });
         }
 
@@ -707,34 +835,74 @@
             testInput.addEventListener('input', runLiveTest);
         }
 
+        // キーワード追加
         const addBtn = document.getElementById('stj_add_keyword');
         if (addBtn) {
             addBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
                 addKeywordRow(modal);
             });
         }
 
+        // 一括削除（モード移行）
+        const bulkDeleteBtn = document.getElementById('stj_bulk_delete');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
+                enterBulkDeleteMode();
+            });
+        }
+
+        // 削除キャンセル
+        const delCancelBtn = document.getElementById('stj_delete_cancel');
+        if (delCancelBtn) {
+            delCancelBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!isBulkDeleteMode) return;
+                if (isDialogActive) return;
+                exitBulkDeleteMode();
+            });
+        }
+
+        // 削除実行
+        const delExecBtn = document.getElementById('stj_delete_execute');
+        if (delExecBtn) {
+            delExecBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!isBulkDeleteMode) return;
+                if (isDialogActive) return;
+                executeBulkDelete();
+            });
+        }
+
+        // キャンセル
         const cancelBtn = document.getElementById('stj_cancel_export');
         if (cancelBtn) {
             cancelBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
                 closeExportModal();
             });
         }
 
+        // JSON出力
         const exportBtn = document.getElementById('stj_export_json');
         if (exportBtn) {
             exportBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
                 exportJSON();
             });
         }
 
+        // セーブ
         const saveBtn = document.getElementById('stj_save_data');
         if (saveBtn) {
             saveBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
                 saveData();
             });
         }
@@ -742,6 +910,7 @@
         modal.querySelectorAll('.stj-apply-special').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
                 const charName = document.getElementById('stj_char_name_display').textContent;
                 const target = this.getAttribute('data-target');
                 if (target === 'default') {
@@ -764,6 +933,7 @@
             document.addEventListener('mousedown', (e) => {
                 if (!stjModalEl) return;
                 if (stjModalEl.style.display !== 'block') return;
+                if (isBulkDeleteMode || isDialogActive) return;
                 if (Date.now() - modalOpenedTimestamp < MODAL_OPEN_GUARD_MS) return;
                 if (stjModalEl.contains(e.target)) return;
                 if (stjButtonEl && stjButtonEl.contains(e.target)) return;
@@ -772,17 +942,79 @@
         }
     }
 
+    // ===== 一括削除の実行フロー =====
+    function executeBulkDelete() {
+        const marked = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
+        if (marked.length === 0) return;
+
+        isDialogActive = true;
+
+        const delCancelBtn = document.getElementById('stj_delete_cancel');
+        const delExecBtn = document.getElementById('stj_delete_execute');
+        if (delCancelBtn) delCancelBtn.disabled = true;
+        if (delExecBtn) delExecBtn.disabled = true;
+
+        // 1秒間メッセージを表示
+        showMessageDialog('選択されたセルを一括削除します');
+
+        setTimeout(() => {
+            hideMessageDialog();
+
+            // 確認ダイアログを表示
+            showDeleteConfirmDialog(
+                // はい：削除実行
+                () => {
+                    isDialogActive = false;
+                    if (delCancelBtn) delCancelBtn.disabled = false;
+                    if (delExecBtn) delExecBtn.disabled = false;
+
+                    // 削除実行
+                    const targets = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
+                    targets.forEach(el => el.remove());
+                    runLiveTest();
+                    // 一括削除モードは維持
+                },
+                // いいえ：選択状態を保持したまま復帰
+                () => {
+                    isDialogActive = false;
+                    if (delCancelBtn) delCancelBtn.disabled = false;
+                    if (delExecBtn) delExecBtn.disabled = false;
+                }
+            );
+        }, 1000);
+    }
+
     function attachKeywordRowListeners(item, index) {
         const previewEl = item.querySelector('.stj-image-preview');
         if (previewEl) {
             previewEl.addEventListener('mousedown', function(e) {
                 if (e.button !== 0) return;
-                if (item.classList.contains('editing')) return;
 
                 const target = e.target;
                 if (target && target.closest && target.closest('button')) {
                     return;
                 }
+
+                // 一括削除モード中でもクリック検出のために pointerDragState を記録（ただしドラッグは不可）
+                if (isBulkDeleteMode) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pointerDragState = {
+                        sourceItem: item,
+                        startX: e.clientX,
+                        startY: e.clientY,
+                        lastX: e.clientX,
+                        lastY: e.clientY,
+                        isDragging: false,
+                        isBulkDelete: true,
+                        currentTarget: null,
+                        ghostState: null,
+                        scrollContainer: null
+                    };
+                    return;
+                }
+
+                if (item.classList.contains('editing')) return;
 
                 e.preventDefault();
                 e.stopPropagation();
@@ -793,6 +1025,7 @@
                     lastX: e.clientX,
                     lastY: e.clientY,
                     isDragging: false,
+                    isBulkDelete: false,
                     currentTarget: null,
                     ghostState: null,
                     scrollContainer: null
@@ -804,6 +1037,7 @@
         if (deleteButton) {
             deleteButton.addEventListener('click', function(e) {
                 e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
                 showDeleteConfirmDialog(() => {
                     item.remove();
                     runLiveTest();
@@ -815,6 +1049,7 @@
         if (applyButton) {
             applyButton.addEventListener('click', function(e) {
                 e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
                 updateSinglePreviewByItem(item);
                 item.classList.remove('editing');
             });
@@ -823,11 +1058,11 @@
         const inputs = item.querySelectorAll('input');
         inputs.forEach(input => {
             input.addEventListener('input', runLiveTest);
-            // ★ Enter キーで決定ボタンと同じ動作
             input.addEventListener('keydown', function(e) {
                 if (e.key !== 'Enter') return;
                 if (e.shiftKey) return;
                 if (e.isComposing || e.keyCode === 229) return;
+                if (isBulkDeleteMode || isDialogActive) return;
                 e.preventDefault();
                 e.stopPropagation();
                 updateSinglePreviewByItem(item);
