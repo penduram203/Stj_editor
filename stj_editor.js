@@ -13,11 +13,10 @@
     let confirmDialogEl = null;
     let pendingDeleteCallback = null;
 
-    let stjDraggedItem = null;
-
-    // ★ Firefox のドラッグゴースト生成を抑止するための透明 1px GIF
-    const TRANSPARENT_DRAG_IMAGE_DATAURL =
-        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    // ===== カスタムドラッグ（HTML5 DnD を使わない） =====
+    let pointerDragState = null;
+    let pointerDragHandlerInstalled = false;
+    const DRAG_THRESHOLD_PX = 5;
 
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
@@ -279,6 +278,60 @@
         parent.removeChild(placeholder);
     }
 
+    // ===== カスタムドラッグ ハンドラ（document に一度だけ登録） =====
+    function installPointerDragHandlers() {
+        if (pointerDragHandlerInstalled) return;
+        pointerDragHandlerInstalled = true;
+
+        document.addEventListener('mousemove', (e) => {
+            if (!pointerDragState) return;
+            const s = pointerDragState;
+            const dx = e.clientX - s.startX;
+            const dy = e.clientY - s.startY;
+
+            if (!s.isDragging && (dx * dx + dy * dy) > (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) {
+                s.isDragging = true;
+                s.sourceItem.classList.add('stj-dragging');
+            }
+
+            if (!s.isDragging) return;
+
+            // カーソル下の要素から最も近い .stj-keyword-item を探す
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            const target = el && el.closest ? el.closest('.stj-keyword-item') : null;
+            const validTarget = (target && target !== s.sourceItem) ? target : null;
+
+            if (s.currentTarget && s.currentTarget !== validTarget) {
+                s.currentTarget.classList.remove('stj-drag-over');
+            }
+            s.currentTarget = validTarget;
+            if (validTarget) {
+                validTarget.classList.add('stj-drag-over');
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!pointerDragState) return;
+            const s = pointerDragState;
+            pointerDragState = null;
+
+            if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
+            if (s.currentTarget) s.currentTarget.classList.remove('stj-drag-over');
+
+            if (s.isDragging) {
+                if (s.currentTarget && s.currentTarget !== s.sourceItem) {
+                    swapCells(s.sourceItem, s.currentTarget);
+                    runLiveTest();
+                }
+            } else {
+                // クリック扱い：編集モードへ
+                if (s.sourceItem && !s.sourceItem.classList.contains('editing')) {
+                    s.sourceItem.classList.add('editing');
+                }
+            }
+        });
+    }
+
     function createExportButton() {
         const buttonContainer = document.querySelector('#rm_ch_create_block .form_create_bottom_buttons_block');
         if (!buttonContainer) return;
@@ -525,6 +578,8 @@
             attachKeywordRowListeners(firstItem, 0);
         }
 
+        installPointerDragHandlers();
+
         if (!outsideClickHandlerInstalled) {
             outsideClickHandlerInstalled = true;
             document.addEventListener('mousedown', (e) => {
@@ -541,79 +596,21 @@
     function attachKeywordRowListeners(item, index) {
         const previewEl = item.querySelector('.stj-image-preview');
         if (previewEl) {
-            // クリック → 編集モード
-            previewEl.addEventListener('click', function(e) {
+            // ★ カスタムドラッグ開始（HTML5 DnD は使用しない）
+            previewEl.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return;
+                if (item.classList.contains('editing')) return;
+                e.preventDefault();      // テキスト選択・ネイティブドラッグを抑止
                 e.stopPropagation();
-                if (!item.classList.contains('editing')) {
-                    item.classList.add('editing');
-                }
-            });
-
-            // ★ ドラッグ開始：Firefox のドラッグゴースト生成を抑止
-            previewEl.addEventListener('dragstart', function(e) {
-                e.stopPropagation();
-                stjDraggedItem = item;
-                try {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', 'stj-cell');
-                    // Firefox: デフォルトのドラッグ用スナップショットを無効化
-                    const emptyImg = new Image();
-                    emptyImg.src = TRANSPARENT_DRAG_IMAGE_DATAURL;
-                    e.dataTransfer.setDragImage(emptyImg, 0, 0);
-                } catch (err) { /* 一部ブラウザ対策 */ }
-                setTimeout(() => item.classList.add('stj-dragging'), 0);
-            });
-
-            // ★ ドラッグ終了：Firefox に残るフォーカス/描画アーティファクトをクリア
-            previewEl.addEventListener('dragend', function(e) {
-                e.stopPropagation();
-                item.classList.remove('stj-dragging');
-                stjDraggedItem = null;
-                document.querySelectorAll('.stj-keyword-item.stj-drag-over')
-                    .forEach(el => el.classList.remove('stj-drag-over'));
-
-                try { previewEl.blur(); } catch (err) {}
-                // 強制再描画（Firefox の残留描画バッファをクリア）
-                void previewEl.offsetHeight;
-                previewEl.style.transform = 'translateZ(0)';
-                requestAnimationFrame(() => {
-                    previewEl.style.transform = '';
-                });
+                pointerDragState = {
+                    sourceItem: item,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    isDragging: false,
+                    currentTarget: null
+                };
             });
         }
-
-        item.setAttribute('draggable', 'false');
-        if (previewEl) previewEl.setAttribute('draggable', 'true');
-
-        // ネイティブ img/video のドラッグを抑止
-        item.querySelectorAll('img, video').forEach(el => {
-            el.setAttribute('draggable', 'false');
-            el.addEventListener('dragstart', (e) => e.preventDefault());
-        });
-
-        // ドロップ受け入れ
-        item.addEventListener('dragover', function(e) {
-            if (!stjDraggedItem || stjDraggedItem === item) return;
-            e.preventDefault();
-            try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
-            if (!item.classList.contains('stj-drag-over')) {
-                item.classList.add('stj-drag-over');
-            }
-        });
-        item.addEventListener('dragleave', function(e) {
-            if (!item.contains(e.relatedTarget)) {
-                item.classList.remove('stj-drag-over');
-            }
-        });
-        item.addEventListener('drop', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            item.classList.remove('stj-drag-over');
-            if (!stjDraggedItem || stjDraggedItem === item) return;
-            swapCells(item, stjDraggedItem);
-            stjDraggedItem = null;
-            runLiveTest();
-        });
 
         const deleteButton = item.querySelector('.stj-delete-row');
         if (deleteButton) {
@@ -834,12 +831,12 @@
             let mediaHtml = '';
             if (isVideoUrl(fullPath)) {
                 mediaHtml = `
-                    <video src="${fullPath}" autoplay loop muted playsinline preload="auto" draggable="false"
+                    <video src="${fullPath}" autoplay loop muted playsinline preload="auto"
                            style="width: 100%; height: 100%; object-fit: contain; display: block; background-color: rgba(0,0,0,0.4);">
                     </video>`;
             } else {
                 mediaHtml = `
-                    <img src="${fullPath}" alt="${fileName}" draggable="false"
+                    <img src="${fullPath}" alt="${fileName}"
                          style="width: 100%; height: 100%; object-fit: contain; display: block;">`;
             }
 
