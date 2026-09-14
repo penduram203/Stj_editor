@@ -107,9 +107,13 @@
   align-items: center;
   overflow: hidden;
   counter-increment: stj-cell-num;
+  /* ★ ドラッグ中のテキスト選択を抑止 */
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
 }
 
-/* 各セルの番号：text-shadow を使わず -webkit-text-stroke + paint-order で縁取り */
+/* ★ 各セルの番号：8方向 text-shadow 方式（全ブラウザ安定、白い膜なし） */
 .stj-keyword-item::after {
   content: counter(stj-cell-num);
   display: block;
@@ -120,10 +124,15 @@
   font-weight: 900;
   line-height: 1;
   color: #ffffff;
-  background: transparent;
-  -webkit-text-stroke: 5px #000000;
-  paint-order: stroke fill;
-  text-shadow: none;
+  text-shadow:
+    2px 0 0 #000000,
+    -2px 0 0 #000000,
+    0 2px 0 #000000,
+    0 -2px 0 #000000,
+    2px 2px 0 #000000,
+    -2px 2px 0 #000000,
+    2px -2px 0 #000000,
+    -2px -2px 0 #000000;
   z-index: 30;
   pointer-events: none;
   user-select: none;
@@ -220,8 +229,6 @@
   position: relative;
   flex-shrink: 0;
   box-sizing: border-box;
-  /* ★ Firefox 特有のドラッグ可能要素への自動フォーカスを抑止 */
-  -moz-user-focus: ignore;
   /* ★ 意図しない視覚効果を明示的にリセット */
   outline: none;
   background-image: none;
@@ -230,24 +237,23 @@
   mix-blend-mode: normal;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
 }
-
-/* ★ Firefox のフォーカス/アクティブ由来の視覚効果を強制リセット */
-.stj-image-preview:focus,
-.stj-image-preview:focus-visible,
-.stj-image-preview:focus-within,
-.stj-image-preview:active {
-  outline: none !important;
-  box-shadow: none !important;
-  background-image: none !important;
-  filter: none !important;
-}
-
 .stj-image-preview img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  /* image-rendering は Firefox で不安定なため指定しない */
+  /* ★ ネイティブ画像ドラッグを抑止（親のカスタムドラッグを優先） */
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+.stj-image-preview video {
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
 }
 .stj-preview-text {
   color: #a0aec0;
@@ -259,13 +265,14 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 .stj-preview-error {
   color: #e53e3e !important;
   font-weight: bold;
 }
 
-/* ===== カーソルとドラッグ ===== */
+/* ===== カーソル ===== */
 .stj-keyword-item:not(.editing) .stj-image-preview {
   cursor: grab;
 }
@@ -285,11 +292,14 @@
   pointer-events: none;
 }
 
-/* ドラッグ中のソースセル */
-.stj-keyword-item.stj-dragging {
-  opacity: 0.35;
+/* ===== ドラッグ中のソースセル：opacity/filter を使わず枠で表現 ===== */
+.stj-keyword-item.stj-dragging .stj-image-preview {
+  border-color: #ff8c00;
+  border-style: solid;
+  box-shadow: 0 0 16px rgba(255, 140, 0, 0.85), inset 0 0 16px rgba(255, 140, 0, 0.4);
 }
-/* ドロップ先のセル：赤枠＋赤グロー */
+
+/* ===== ドロップ先のセル：赤枠＋赤グロー ===== */
 .stj-keyword-item.stj-drag-over {
   outline: 4px solid #ff2d2d;
   outline-offset: -4px;
@@ -298,6 +308,7 @@
 }
 .stj-keyword-item.stj-drag-over .stj-image-preview {
   border-color: #ff2d2d;
+  border-style: solid;
 }
 
 /* ===== 入力エリア ===== */
@@ -383,6 +394,7 @@
   box-sizing: border-box;
 }
 
+/* ★ 特殊セルの見出しも text-shadow 方式に統一 */
 .stj-special-item:nth-child(1) .stj-special-inputs::before,
 .stj-special-item:nth-child(2) .stj-special-inputs::before {
   position: absolute;
@@ -394,10 +406,15 @@
   font-weight: 900;
   letter-spacing: 2px;
   color: #ffffff;
-  background: transparent;
-  -webkit-text-stroke: 4px #000000;
-  paint-order: stroke fill;
-  text-shadow: none;
+  text-shadow:
+    2px 0 0 #000000,
+    -2px 0 0 #000000,
+    0 2px 0 #000000,
+    0 -2px 0 #000000,
+    2px 2px 0 #000000,
+    -2px 2px 0 #000000,
+    2px -2px 0 #000000,
+    -2px -2px 0 #000000;
   z-index: 6;
   pointer-events: none;
   white-space: nowrap;
