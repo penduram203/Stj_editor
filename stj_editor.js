@@ -721,9 +721,20 @@
             });
         }
 
-        const inputs = item.querySelectorAll('input');
+                const inputs = item.querySelectorAll('input');
         inputs.forEach(input => {
             input.addEventListener('input', runLiveTest);
+            // ★ Enter キーで決定ボタンと同じ動作
+            input.addEventListener('keydown', function(e) {
+                if (e.key !== 'Enter') return;
+                if (e.shiftKey) return;              // Shift+Enter は改行などに譲る
+                if (e.isComposing || e.keyCode === 229) return;  // IME 変換確定時は無視
+                e.preventDefault();
+                e.stopPropagation();
+                // 決定ボタンと同一処理
+                updateSinglePreviewByItem(item);
+                item.classList.remove('editing');
+            });
         });
     }
 
