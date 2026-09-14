@@ -20,7 +20,7 @@
   background-color: #2d3748;
 }
 
-/* モーダルウィンドウスタイル（6セル分の最小幅を保証） */
+/* モーダルウィンドウスタイル */
 #stj_export_modal {
   display: none;
   position: fixed;
@@ -93,7 +93,7 @@
   color: white;
 }
 
-/* ===== キーワードセル（260×260、横方向パディング0） ===== */
+/* ===== キーワードセル ===== */
 .stj-keyword-item {
   position: relative;
   width: 260px;
@@ -106,10 +106,10 @@
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  counter-increment: stj-cell-num;  /* ★ CSSカウンターで自動採番 */
+  counter-increment: stj-cell-num;
 }
 
-/* ★ 各セルの右上に番号（白太字＋黒縁取り、最前面） */
+/* 各セルの右上に番号（白太字＋黒縁取り） */
 .stj-keyword-item::after {
   content: counter(stj-cell-num);
   position: absolute;
@@ -131,7 +131,7 @@
   user-select: none;
 }
 
-/* ===== キーワードグリッド（6列、コンテンツ幅に自然拡張、カウンターリセット） ===== */
+/* ===== キーワードグリッド（6列） ===== */
 .stj-grid-container {
   display: grid;
   grid-template-columns: repeat(6, 260px);
@@ -140,7 +140,7 @@
   width: max-content;
   min-width: 1560px;
   margin: 0 auto;
-  counter-reset: stj-cell-num;  /* ★ カウンター開始 */
+  counter-reset: stj-cell-num;
 }
 
 .stj-keyword-width {
@@ -222,20 +222,12 @@
   position: relative;
   flex-shrink: 0;
   box-sizing: border-box;
+  outline: none; /* フォーカスリング抑制（draggable による暗黙のハイライト対策） */
 }
 .stj-image-preview img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  /* ★ ネイティブ画像ドラッグを無効化（親でHTML5 DnDを制御） */
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-.stj-image-preview video {
-  /* ★ 動画も同様 */
-  pointer-events: none;
-  user-select: none;
 }
 .stj-preview-text {
   color: #a0aec0;
@@ -247,7 +239,6 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  pointer-events: none; /* ★ クリックは親に通す */
 }
 .stj-preview-error {
   color: #e53e3e !important;
@@ -274,17 +265,22 @@
   pointer-events: none;
 }
 
-/* ★ ドラッグ中のソースセル */
+/* ★ ドラッグ中のソースセル：半透明化 */
 .stj-keyword-item.stj-dragging {
   opacity: 0.35;
 }
-/* ★ ドロップ先のセル */
+/* ★ ドロップ先のセル：太い赤枠＋赤グロー */
 .stj-keyword-item.stj-drag-over {
-  outline: 3px dashed #64b5f6;
-  outline-offset: -3px;
+  outline: 4px solid #ff2d2d;
+  outline-offset: -4px;
+  box-shadow: 0 0 0 2px rgba(255, 45, 45, 0.4), 0 0 20px rgba(255, 45, 45, 0.7);
+  border-radius: 8px;
+}
+.stj-keyword-item.stj-drag-over .stj-image-preview {
+  border-color: #ff2d2d;
 }
 
-/* ===== 入力エリア：セル全面に重なる（左右余白ゼロ） ===== */
+/* ===== 入力エリア：セル全面に重なる ===== */
 .stj-inputs-container {
   display: none;
   position: absolute;
@@ -293,7 +289,7 @@
   right: 0;
   bottom: 0;
   padding: 6px 10px 8px 10px;
-  padding-top: 48px; /* ★ 番号と重ならないよう余白を追加 */
+  padding-top: 48px;
   box-sizing: border-box;
   flex-direction: column;
   gap: 6px;
@@ -330,7 +326,7 @@
   font-size: 14px !important;
 }
 
-/* ===== デフォルト/サムネイル（3列グリッド、セル内側ラベル付き） ===== */
+/* ===== デフォルト/サムネイル ===== */
 .stj-special-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
