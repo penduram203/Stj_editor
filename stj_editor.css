@@ -636,3 +636,9 @@
   pointer-events: none !important;  /* 万一クリックが届いても無効化 */
   opacity: 0;              /* 視覚的にも完全に隠す */
 }
+
+/* ===== ドラッグ中はリアルタイムキーワード反応テスト枠を無視 ===== */
+#stj_export_modal.stj-drag-active #stj_test_section {
+  visibility: hidden;      /* 完全に非表示（レイアウトは維持） */
+  pointer-events: none;    /* クリック・ホバー・elementFromPoint から除外 */
+}
