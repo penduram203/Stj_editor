@@ -15,6 +15,10 @@
 
     let stjDraggedItem = null;
 
+    // ★ Firefox のドラッグゴースト生成を抑止するための透明 1px GIF
+    const TRANSPARENT_DRAG_IMAGE_DATAURL =
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
     function isVideoUrl(url) {
         if (!url || typeof url !== 'string') return false;
         return !!url.match(/\.(mp4|webm)$/i);
@@ -252,7 +256,6 @@
         );
     }
 
-    // ===== 削除確認ダイアログ =====
     function showDeleteConfirmDialog(onConfirm) {
         if (!confirmDialogEl) return;
         pendingDeleteCallback = onConfirm;
@@ -265,7 +268,6 @@
         pendingDeleteCallback = null;
     }
 
-    // ===== セルのスワップ =====
     function swapCells(a, b) {
         if (!a || !b || a === b) return;
         const parent = a.parentNode;
@@ -277,7 +279,6 @@
         parent.removeChild(placeholder);
     }
 
-    // ===== ボタン & モーダル =====
     function createExportButton() {
         const buttonContainer = document.querySelector('#rm_ch_create_block .form_create_bottom_buttons_block');
         if (!buttonContainer) return;
@@ -548,28 +549,40 @@
                 }
             });
 
-            // ネイティブ画像ドラッグを抑止（親の HTML5 DnD を優先させる）
+            // ★ ドラッグ開始：Firefox のドラッグゴースト生成を抑止
             previewEl.addEventListener('dragstart', function(e) {
                 e.stopPropagation();
                 stjDraggedItem = item;
                 try {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', 'stj-cell');
+                    // Firefox: デフォルトのドラッグ用スナップショットを無効化
+                    const emptyImg = new Image();
+                    emptyImg.src = TRANSPARENT_DRAG_IMAGE_DATAURL;
+                    e.dataTransfer.setDragImage(emptyImg, 0, 0);
                 } catch (err) { /* 一部ブラウザ対策 */ }
                 setTimeout(() => item.classList.add('stj-dragging'), 0);
             });
 
+            // ★ ドラッグ終了：Firefox に残るフォーカス/描画アーティファクトをクリア
             previewEl.addEventListener('dragend', function(e) {
                 e.stopPropagation();
                 item.classList.remove('stj-dragging');
                 stjDraggedItem = null;
                 document.querySelectorAll('.stj-keyword-item.stj-drag-over')
                     .forEach(el => el.classList.remove('stj-drag-over'));
+
+                try { previewEl.blur(); } catch (err) {}
+                // 強制再描画（Firefox の残留描画バッファをクリア）
+                void previewEl.offsetHeight;
+                previewEl.style.transform = 'translateZ(0)';
+                requestAnimationFrame(() => {
+                    previewEl.style.transform = '';
+                });
             });
         }
 
-        // ドラッグ対象セル全体
-        item.setAttribute('draggable', 'false'); // ★ item 自体は draggable にしない
+        item.setAttribute('draggable', 'false');
         if (previewEl) previewEl.setAttribute('draggable', 'true');
 
         // ネイティブ img/video のドラッグを抑止
