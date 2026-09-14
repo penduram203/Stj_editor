@@ -43,19 +43,19 @@
 }
 .stj-input-group label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
+  margin-bottom: 4px;
+  font-size: 13px;
   color: #e2e8f0;
   font-weight: 500;
 }
 .stj-input-group input, .stj-input-group select {
   width: 100%;
-  padding: 8px;
+  padding: 6px;
   background-color: #4a5568;
   border: 1px solid #718096;
   border-radius: 4px;
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   box-sizing: border-box;
 }
 .stj-input-group select {
@@ -90,24 +90,28 @@
   color: white;
 }
 
-/* ===== キーワードセル（3列グリッド） ===== */
+/* ===== キーワードセル（3列グリッド、固定サイズ） ===== */
 .stj-keyword-item {
-  display: flex;
+  position: relative;
+  width: 220px;
+  height: 220px;
   padding: 10px 8px;
+  box-sizing: border-box;
   background-color: #1a202c;
   border-radius: 8px;
-  width: 100%;
-  gap: 6px;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  min-height: 230px;
-  box-sizing: border-box;
-  position: relative;
+  overflow: hidden;
+  justify-self: center;
 }
 .stj-grid-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+  justify-items: center;
 }
+
 .stj-keyword-width {
   flex: 1;
   min-width: 0;
@@ -120,13 +124,13 @@
   flex: 1;
 }
 
-/* ===== ❌削除ボタン（コンテナ左上に絶対配置） ===== */
+/* ===== ❌削除ボタン（入力エリア左上に絶対配置） ===== */
 .stj-delete-row {
   position: absolute;
-  top: 0;
+  top: 2px;
   left: 0;
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   background-color: #e53e3e;
   color: white;
@@ -137,8 +141,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  z-index: 5;
+  font-size: 15px;
+  z-index: 15;
 }
 
 /* セーブボタンのスタイル */
@@ -209,20 +213,57 @@
   font-weight: bold;
 }
 
-/* ===== 入力エリア（削除ボタン分の上余白を確保） ===== */
-.stj-inputs-container {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  justify-content: center;
-  height: 100%;
-  padding-top: 40px;
-  box-sizing: border-box;
+/* ===== キーワードセル：デフォルトはプレビューのみ、クリックで編集UIをオーバーレイ ===== */
+.stj-keyword-item:not(.editing) .stj-image-preview {
+  cursor: pointer;
 }
-.stj-input-row {
+
+/* 編集時の半透明黒フィルター（プレビュー上に被せ、UIの視認性を確保） */
+.stj-keyword-item.editing .stj-image-preview::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 5;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* 入力エリア：プレビューに完全に重なる */
+.stj-inputs-container {
+  display: none;
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  right: 8px;
+  bottom: 10px;
+  padding: 6px 10px;
+  padding-top: 36px; /* ❌ボタン用の余白 */
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  z-index: 10;
+  overflow-y: auto;
+}
+.stj-keyword-item.editing .stj-inputs-container {
+  display: flex;
+}
+.stj-inputs-container .stj-input-group {
+  margin-bottom: 0;
+}
+.stj-inputs-container .stj-input-group label {
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+.stj-inputs-container .stj-input-group input {
+  padding: 5px 6px;
+  font-size: 12px;
+}
+.stj-inputs-container .stj-input-row {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -230,27 +271,21 @@
   min-width: 0;
 }
 
-/* ===== キーワードセル：通常は入力欄を非表示、プレビュークリックで表示 ===== */
-.stj-keyword-item .stj-inputs-container {
-  display: none;
-}
-.stj-keyword-item.editing .stj-inputs-container {
-  display: flex;
-}
-.stj-keyword-item:not(.editing) .stj-image-preview {
-  cursor: pointer;
-}
-.stj-keyword-item:not(.editing) {
-  justify-content: center;
+/* 反映ボタン（コンパクト） */
+.stj-inputs-container .stj-apply-row {
+  margin-top: 0 !important;
+  padding: 5px 12px !important;
+  font-size: 12px !important;
 }
 
-/* ===== デフォルト/サムネイル（3列グリッド） ===== */
+/* ===== デフォルト/サムネイル（3列グリッド、セル内側ラベル付き） ===== */
 .stj-special-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 25px;
   position: relative;
+  justify-items: center;
 }
 .stj-special-item {
   display: flex;
@@ -279,7 +314,7 @@
   box-sizing: border-box;
 }
 
-/* ===== タイトル（白文字 + 黒縁取り + 太字） ===== */
+/* ===== タイトル（白文字 + 黒縁取り + 太字）：ファイル名入力欄の真上 ===== */
 .stj-special-item:nth-child(1) .stj-special-inputs::before,
 .stj-special-item:nth-child(2) .stj-special-inputs::before {
   position: absolute;
@@ -424,13 +459,9 @@
   .stj-grid-container {
     grid-template-columns: repeat(2, 1fr);
   }
-  .stj-keyword-item,
   .stj-special-item {
     padding: 15px;
     gap: 15px;
-  }
-  .stj-input-row {
-    gap: 8px;
   }
   .stj-keyword-input, .stj-image-input {
     font-size: 14px;
@@ -444,18 +475,19 @@
   }
 }
 @media (max-width: 768px) {
-  .stj-keyword-item, .stj-special-item {
+  /* 特殊セル（デフォルト/サムネイル）のみ縦型化。キーワードセルは固定サイズ維持 */
+  .stj-special-item {
     flex-direction: column;
     gap: 15px;
     align-items: center;
     min-height: auto;
   }
-  .stj-image-preview {
+  .stj-special-preview .stj-image-preview {
     width: 100%;
     height: 300px;
     max-width: none;
   }
-  .stj-inputs-container, .stj-special-inputs {
+  .stj-special-inputs {
     width: 100%;
     justify-content: flex-start;
   }
