@@ -20,9 +20,9 @@
     let pointerDragHandlerInstalled = false;
     const DRAG_THRESHOLD_PX = 5;
 
-    // ===== 自動スクロール（速度 UP） =====
-    const AUTOSCROLL_EDGE_PX = 70;
-    const AUTOSCROLL_MAX_SPEED = 35;   // ★ 22 → 35
+    // ===== 自動スクロール =====
+    const AUTOSCROLL_EDGE_PX = 150;    // ★ 70 → 150：早めにスクロール開始
+    const AUTOSCROLL_MAX_SPEED = 35;   // ★ 45 → 35
     let autoScrollRAF = null;
     let autoScrollTarget = null;
     let autoScrollDelta = 0;
@@ -269,8 +269,11 @@
     }
 
     // ===== ダイアログ =====
-    function showDeleteConfirmDialog(onConfirm, onCancel) {
+    // ★ message を引数で受け取るよう変更
+    function showDeleteConfirmDialog(message, onConfirm, onCancel) {
         if (!confirmDialogEl) return;
+        const msgEl = confirmDialogEl.querySelector('.stj-confirm-message');
+        if (msgEl) msgEl.textContent = message || '本当に削除しますか？';
         pendingDeleteCallback = onConfirm;
         pendingCancelCallback = onCancel || null;
         confirmDialogEl.style.display = 'flex';
@@ -476,7 +479,6 @@
             const dy = e.clientY - s.startY;
 
             if (!s.isDragging && (dx * dx + dy * dy) > (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) {
-                // 一括削除モード中はドラッグしない
                 if (s.isBulkDelete) return;
                 s.isDragging = true;
                 s.sourceItem.classList.add('stj-dragging');
@@ -512,7 +514,6 @@
             } else {
                 const src = s.sourceItem;
                 if (!src) return;
-                // 一括削除モード中のクリック → 削除候補のトグル
                 if (s.isBulkDelete || isBulkDeleteMode) {
                     if (src.classList.contains('stj-marked-for-delete')) {
                         src.classList.remove('stj-marked-for-delete');
@@ -521,7 +522,6 @@
                     }
                     return;
                 }
-                // 通常モード → 編集モードへ
                 if (!src.classList.contains('editing')) {
                     src.classList.add('editing');
                 }
@@ -545,7 +545,6 @@
         if (isBulkDeleteMode) return;
         isBulkDeleteMode = true;
 
-        // 編集中のセルを閉じる
         document.querySelectorAll('.stj-keyword-item.editing').forEach(el => {
             el.classList.remove('editing');
         });
@@ -569,7 +568,6 @@
         if (cancelBtn) cancelBtn.disabled = true;
         if (exportBtn) exportBtn.disabled = true;
 
-        // 決定/キャンセルボタンも一括削除モードでは反応しないよう無効化
         document.querySelectorAll('.stj-keyword-item .stj-apply-row, .stj-keyword-item .stj-delete-row').forEach(btn => {
             btn.disabled = true;
         });
@@ -580,7 +578,6 @@
         isBulkDeleteMode = false;
         isDialogActive = false;
 
-        // 全削除候補マークを除去
         document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete').forEach(el => {
             el.classList.remove('stj-marked-for-delete');
         });
@@ -673,7 +670,6 @@
 
     function closeExportModal() {
         if (!stjModalEl) return;
-        // 一括削除モード中・ダイアログ表示中はモーダルを閉じさせない
         if (isBulkDeleteMode || isDialogActive) return;
         stjModalEl.style.display = 'none';
     }
@@ -799,7 +795,6 @@
         confirmDialogEl = modal.querySelector('#stj_confirm_dialog');
         messageDialogEl = modal.querySelector('#stj_message_dialog');
 
-        // 確認ダイアログ
         if (confirmDialogEl) {
             confirmDialogEl.addEventListener('click', (e) => e.stopPropagation());
             confirmDialogEl.querySelector('.stj-confirm-yes').addEventListener('click', (e) => {
@@ -820,7 +815,6 @@
             });
         }
 
-        // メッセージダイアログはクリックをすべて飲み込む
         if (messageDialogEl) {
             messageDialogEl.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -835,7 +829,6 @@
             testInput.addEventListener('input', runLiveTest);
         }
 
-        // キーワード追加
         const addBtn = document.getElementById('stj_add_keyword');
         if (addBtn) {
             addBtn.addEventListener('click', (e) => {
@@ -845,7 +838,6 @@
             });
         }
 
-        // 一括削除（モード移行）
         const bulkDeleteBtn = document.getElementById('stj_bulk_delete');
         if (bulkDeleteBtn) {
             bulkDeleteBtn.addEventListener('click', (e) => {
@@ -855,7 +847,6 @@
             });
         }
 
-        // 削除キャンセル
         const delCancelBtn = document.getElementById('stj_delete_cancel');
         if (delCancelBtn) {
             delCancelBtn.addEventListener('click', (e) => {
@@ -866,7 +857,6 @@
             });
         }
 
-        // 削除実行
         const delExecBtn = document.getElementById('stj_delete_execute');
         if (delExecBtn) {
             delExecBtn.addEventListener('click', (e) => {
@@ -877,7 +867,6 @@
             });
         }
 
-        // キャンセル
         const cancelBtn = document.getElementById('stj_cancel_export');
         if (cancelBtn) {
             cancelBtn.addEventListener('click', (e) => {
@@ -887,7 +876,6 @@
             });
         }
 
-        // JSON出力
         const exportBtn = document.getElementById('stj_export_json');
         if (exportBtn) {
             exportBtn.addEventListener('click', (e) => {
@@ -897,7 +885,6 @@
             });
         }
 
-        // セーブ
         const saveBtn = document.getElementById('stj_save_data');
         if (saveBtn) {
             saveBtn.addEventListener('click', (e) => {
@@ -943,6 +930,7 @@
     }
 
     // ===== 一括削除の実行フロー =====
+    // ★ メッセージダイアログを廃止し、直接確認ダイアログを表示
     function executeBulkDelete() {
         const marked = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
         if (marked.length === 0) return;
@@ -954,34 +942,26 @@
         if (delCancelBtn) delCancelBtn.disabled = true;
         if (delExecBtn) delExecBtn.disabled = true;
 
-        // 1秒間メッセージを表示
-        showMessageDialog('選択されたセルを一括削除します');
+        // 直接確認ダイアログを表示
+        showDeleteConfirmDialog(
+            '本当に一括削除しますか？',
+            // はい：削除実行
+            () => {
+                isDialogActive = false;
+                if (delCancelBtn) delCancelBtn.disabled = false;
+                if (delExecBtn) delExecBtn.disabled = false;
 
-        setTimeout(() => {
-            hideMessageDialog();
-
-            // 確認ダイアログを表示
-            showDeleteConfirmDialog(
-                // はい：削除実行
-                () => {
-                    isDialogActive = false;
-                    if (delCancelBtn) delCancelBtn.disabled = false;
-                    if (delExecBtn) delExecBtn.disabled = false;
-
-                    // 削除実行
-                    const targets = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
-                    targets.forEach(el => el.remove());
-                    runLiveTest();
-                    // 一括削除モードは維持
-                },
-                // いいえ：選択状態を保持したまま復帰
-                () => {
-                    isDialogActive = false;
-                    if (delCancelBtn) delCancelBtn.disabled = false;
-                    if (delExecBtn) delExecBtn.disabled = false;
-                }
-            );
-        }, 1000);
+                const targets = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
+                targets.forEach(el => el.remove());
+                runLiveTest();
+            },
+            // いいえ：選択状態を保持したまま復帰
+            () => {
+                isDialogActive = false;
+                if (delCancelBtn) delCancelBtn.disabled = false;
+                if (delExecBtn) delExecBtn.disabled = false;
+            }
+        );
     }
 
     function attachKeywordRowListeners(item, index) {
@@ -995,7 +975,6 @@
                     return;
                 }
 
-                // 一括削除モード中でもクリック検出のために pointerDragState を記録（ただしドラッグは不可）
                 if (isBulkDeleteMode) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -1038,7 +1017,8 @@
             deleteButton.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (isBulkDeleteMode || isDialogActive) return;
-                showDeleteConfirmDialog(() => {
+                // ★ 個別削除の文言を指定
+                showDeleteConfirmDialog('本当に削除しますか？', () => {
                     item.remove();
                     runLiveTest();
                 });
