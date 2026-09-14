@@ -20,7 +20,7 @@
   background-color: #2d3748;
 }
 
-/* ===== モーダルウィンドウ（8セル分の最小幅を保証） ===== */
+/* モーダルウィンドウスタイル（8セル分の最小幅を保証） */
 #stj_export_modal {
   display: none;
   position: fixed;
@@ -28,7 +28,7 @@
   left: 0;
   right: 0;
   margin: 0 auto;
-  width: max(calc(100vw + 80px), 1660px); /* 8×200 + padding + 余裕 */
+  width: max(calc(100vw + 80px), 1660px);
   height: 100vh;
   background-color: #2d3748;
   border: 1px solid #4a5568;
@@ -47,18 +47,18 @@
 .stj-input-group label {
   display: block;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: 14px;
   color: #e2e8f0;
   font-weight: 500;
 }
 .stj-input-group input, .stj-input-group select {
   width: 100%;
-  padding: 6px;
+  padding: 8px;
   background-color: #4a5568;
   border: 1px solid #718096;
   border-radius: 4px;
   color: white;
-  font-size: 13px;
+  font-size: 14px;
   box-sizing: border-box;
 }
 .stj-input-group select {
@@ -112,11 +112,11 @@
 .stj-grid-container {
   display: grid;
   grid-template-columns: repeat(8, 200px);
-  column-gap: 0;              /* 横方向の余白ゼロ */
-  row-gap: 8px;               /* 縦方向の余白のみ確保 */
-  width: max-content;         /* セル合計幅ぶんだけ広がる */
-  min-width: 1600px;          /* 8×200px を下回らない */
-  margin: 0 auto;             /* モーダル内で中央寄せ */
+  column-gap: 0;
+  row-gap: 8px;
+  width: max-content;
+  min-width: 1600px;
+  margin: 0 auto;
 }
 
 .stj-keyword-width {
@@ -246,7 +246,7 @@
   right: 0;
   bottom: 0;
   padding: 4px 6px 6px 6px;
-  padding-top: 34px;
+  padding-top: 36px;
   box-sizing: border-box;
   flex-direction: column;
   gap: 4px;
@@ -260,13 +260,17 @@
 .stj-inputs-container .stj-input-group {
   margin-bottom: 0;
 }
+/* ★ ラベルを大きく */
 .stj-inputs-container .stj-input-group label {
-  font-size: 11px;
-  margin-bottom: 2px;
+  font-size: 13px;
+  margin-bottom: 3px;
+  font-weight: bold;
+  color: #e2e8f0;
 }
+/* ★ 入力欄を大きく */
 .stj-inputs-container .stj-input-group input {
-  padding: 4px 5px;
-  font-size: 11px;
+  padding: 6px 8px;
+  font-size: 14px;
 }
 .stj-inputs-container .stj-input-row {
   display: flex;
@@ -275,10 +279,11 @@
   margin-bottom: 0;
   min-width: 0;
 }
+/* ★ 決定ボタンも少し大きく */
 .stj-inputs-container .stj-apply-row {
-  margin-top: 0 !important;
-  padding: 4px 10px !important;
-  font-size: 11px !important;
+  margin-top: 4px !important;
+  padding: 6px 16px !important;
+  font-size: 13px !important;
 }
 
 /* ===== デフォルト/サムネイル（3列グリッド、セル内側ラベル付き） ===== */
@@ -382,7 +387,7 @@
 .stj-keyword-input, .stj-image-input {
   width: 100%;
   box-sizing: border-box;
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px;
 }
 
@@ -453,7 +458,6 @@
 }
 
 /* ===== レスポンシブ ===== */
-/* 8列の下限: 8×200 + padding 40 = 1640px → 余裕を見て 1660px */
 @media (max-width: 1660px) {
   .stj-grid-container { grid-template-columns: repeat(7, 200px); min-width: 1400px; }
 }
