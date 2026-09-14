@@ -629,3 +629,10 @@
   pointer-events: none;
   white-space: nowrap;
 }
+
+/* ===== 編集モード時は左右の切り替えボタンを編集オーバーレイの背面に隠す ===== */
+.stj-keyword-item.editing .stj-image-preview button {
+  z-index: 4 !important;   /* 編集フィルター（z-index:5）と入力エリア（z-index:10）より下に配置 */
+  pointer-events: none !important;  /* 万一クリックが届いても無効化 */
+  opacity: 0;              /* 視覚的にも完全に隠す */
+}
