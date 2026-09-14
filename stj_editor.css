@@ -103,15 +103,15 @@
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  justify-self: center;
 }
 
-/* ===== キーワードグリッド（デフォルト8列） ===== */
+/* ===== キーワードグリッド（デフォルト8列、横方向ギャップ0） ===== */
 .stj-grid-container {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 8px;
-  justify-items: center;
+  grid-template-columns: repeat(8, 200px);
+  column-gap: 0;      /* 横方向の余白ゼロ */
+  row-gap: 8px;       /* 縦方向の余白のみ確保 */
+  justify-content: center;
 }
 
 .stj-keyword-width {
@@ -241,7 +241,7 @@
   right: 0;
   bottom: 0;
   padding: 4px 6px 6px 6px;
-  padding-top: 34px; /* ❌ボタン用の余白 */
+  padding-top: 34px;
   box-sizing: border-box;
   flex-direction: column;
   gap: 4px;
@@ -447,30 +447,30 @@
 }
 
 /* ===== レスポンシブ：画面幅に応じてキーワード列数を段階的に減少 ===== */
-/* 8列: 8×200 + 7×8 + 40 = 1696px → 1720px */
-@media (max-width: 1720px) {
-  .stj-grid-container { grid-template-columns: repeat(7, 1fr); }
+/* 8列: 8×200 + モーダル余白40 = 1640px → 1660px */
+@media (max-width: 1660px) {
+  .stj-grid-container { grid-template-columns: repeat(7, 200px); }
 }
-/* 7列: 7×200 + 6×8 + 40 = 1488px → 1520px */
-@media (max-width: 1520px) {
-  .stj-grid-container { grid-template-columns: repeat(6, 1fr); }
+/* 7列: 7×200 + 40 = 1440px → 1460px */
+@media (max-width: 1460px) {
+  .stj-grid-container { grid-template-columns: repeat(6, 200px); }
 }
-/* 6列: 6×200 + 5×8 + 40 = 1280px → 1320px */
-@media (max-width: 1320px) {
-  .stj-grid-container { grid-template-columns: repeat(5, 1fr); }
+/* 6列: 6×200 + 40 = 1240px → 1260px */
+@media (max-width: 1260px) {
+  .stj-grid-container { grid-template-columns: repeat(5, 200px); }
 }
-/* 5列: 5×200 + 4×8 + 40 = 1072px → 1100px */
-@media (max-width: 1100px) {
-  .stj-grid-container { grid-template-columns: repeat(4, 1fr); }
+/* 5列: 5×200 + 40 = 1040px → 1060px */
+@media (max-width: 1060px) {
+  .stj-grid-container { grid-template-columns: repeat(4, 200px); }
   .stj-special-container { grid-template-columns: repeat(2, 1fr); }
 }
-/* 4列: 4×200 + 3×8 + 40 = 864px → 900px */
-@media (max-width: 900px) {
-  .stj-grid-container { grid-template-columns: repeat(3, 1fr); }
+/* 4列: 4×200 + 40 = 840px → 860px */
+@media (max-width: 860px) {
+  .stj-grid-container { grid-template-columns: repeat(3, 200px); }
 }
-/* 3列: 3×200 + 2×8 + 40 = 656px → 690px */
-@media (max-width: 690px) {
-  .stj-grid-container { grid-template-columns: repeat(2, 1fr); }
+/* 3列: 3×200 + 40 = 640px → 660px */
+@media (max-width: 660px) {
+  .stj-grid-container { grid-template-columns: repeat(2, 200px); }
   .stj-special-container { grid-template-columns: 1fr; }
   .stj-button-group { flex-direction: column; gap: 10px; }
   .stj-button-group > div { justify-content: center; }
@@ -479,7 +479,7 @@
     font-size: 16px;
   }
 }
-/* 2列の下限を割る場合: 2×200 + 8 + 40 = 448px → 480px */
-@media (max-width: 480px) {
+/* 2列の下限を割る場合: 2×200 + 40 = 440px → 460px */
+@media (max-width: 460px) {
   .stj-grid-container { grid-template-columns: 1fr; }
 }
