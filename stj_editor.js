@@ -461,16 +461,15 @@
                 s.isDragging = true;
                 s.sourceItem.classList.add('stj-dragging');
                 s.ghostState = createDragGhost(s.sourceItem, e.clientX, e.clientY);
-                // ★ ドラッグ開始時にスクロール対象を確定
                 s.scrollContainer = findScrollableAncestor(s.sourceItem);
+                // ★ ドラッグ中はテスト枠を無視するクラスを付与
+                if (stjModalEl) stjModalEl.classList.add('stj-drag-active');
             }
 
             if (!s.isDragging) return;
 
             moveDragGhost(s.ghostState, e.clientX, e.clientY);
             updateDragTarget(s, e.clientX, e.clientY);
-
-            // ★ 上下端付近で自動スクロール
             updateAutoScroll(s.scrollContainer, e.clientY);
         });
 
@@ -480,6 +479,8 @@
             pointerDragState = null;
 
             stopAutoScroll();
+            // ★ ドラッグ終了：テスト枠を元に戻す
+            if (stjModalEl) stjModalEl.classList.remove('stj-drag-active');
 
             if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
             if (s.currentTarget) s.currentTarget.classList.remove('stj-drag-over');
@@ -502,6 +503,8 @@
             const s = pointerDragState;
             pointerDragState = null;
             stopAutoScroll();
+            // ★ ドラッグ強制終了時もクラスを除去
+            if (stjModalEl) stjModalEl.classList.remove('stj-drag-active');
             if (s.sourceItem) s.sourceItem.classList.remove('stj-dragging');
             if (s.currentTarget) s.currentTarget.classList.remove('stj-drag-over');
             removeDragGhost(s.ghostState);
