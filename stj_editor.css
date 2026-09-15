@@ -377,7 +377,7 @@
   pointer-events: none;
 }
 
-/* ===== 入力エリア ===== */
+/* ===== 入力エリア（上下パディングを均等にして内容を20px上へシフト） ===== */
 .stj-inputs-container {
   display: none;
   position: absolute;
@@ -385,7 +385,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 6px 10px 8px 10px;
+  padding: 6px 10px 48px 10px;   /* ★ 下パディングを8px→48pxへ拡大 */
   padding-top: 48px;
   box-sizing: border-box;
   flex-direction: column;
@@ -432,6 +432,7 @@
   padding: 0;
 }
 
+/* 決定・キャンセル両ボタン：共通で白地＋黒文字 */
 .stj-inputs-container .stj-cell-action-row .stj-apply-row,
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row {
   margin: 0 !important;
@@ -441,24 +442,13 @@
   white-space: nowrap;
   border-radius: 4px;
   cursor: pointer;
+  background-color: #e0e0e0;    /* ★ 共通：白地 */
+  color: #000000;                /* ★ 共通：黒文字 */
   border: 1px solid #aaa;
 }
-
-.stj-inputs-container .stj-cell-action-row .stj-apply-row {
-  background-color: #e0e0e0;
-  color: #000000;
-}
-.stj-inputs-container .stj-cell-action-row .stj-apply-row:hover {
-  background-color: #c8c8c8;
-}
-
-.stj-inputs-container .stj-cell-action-row .stj-cancel-row {
-  background-color: #e53e3e;
-  color: #ffffff;
-  border-color: #c53030;
-}
+.stj-inputs-container .stj-cell-action-row .stj-apply-row:hover,
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row:hover {
-  background-color: #c53030;
+  background-color: #c8c8c8;
 }
 
 /* ===== 編集モード時は左右の切り替えボタンを隠す ===== */
