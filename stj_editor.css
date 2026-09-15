@@ -96,21 +96,21 @@
 
 .stj-ext-row .stj-ext-btn {
   box-sizing: border-box;
-  flex: 0 0 auto;
-  width: 28px;                   /* 正方形の一辺 */
-  height: 28px;                  /* 正方形の一辺 */
-  padding: 0;                    /* 内部余白ゼロ */
-  font-size: 12px;               /* フォントサイズ 12px */
+  flex: 1 1 0;                   /* ★ 均等に幅を分配 */
+  aspect-ratio: 1 / 1;           /* ★ 正方形を維持（幅と高さを一致） */
+  min-width: 0;
+  padding: 0;
+  font-size: 14px;               /* ★ 12px → 14px：ボタン拡大に合わせる */
   font-weight: bold;
   background-color: #4a5568;
   color: #ffffff;
   border: 1px solid #718096;
-  border-radius: 0;              /* 正方形なので角丸なし */
+  border-radius: 0;
   cursor: pointer;
   white-space: nowrap;
   text-align: center;
   line-height: 1;
-  display: flex;                 /* 文字を中央配置 */
+  display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
