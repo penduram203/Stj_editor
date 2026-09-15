@@ -43,6 +43,7 @@
 
 .stj-input-group {
   margin-bottom: 15px;
+  position: relative;   /* ★ 拡張子ボタンの絶対配置基準 */
 }
 .stj-input-group label {
   display: block;
@@ -63,6 +64,61 @@
 }
 .stj-input-group select {
   cursor: pointer;
+}
+
+/* ===== 拡張子入力ボタン（ファイル名入力欄の真下に表示） ===== */
+.stj-extension-buttons {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 3px;
+  z-index: 40;
+  flex-direction: column;
+  gap: 3px;
+  background-color: rgba(0, 0, 0, 0.75);
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  padding: 3px;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.stj-extension-buttons.stj-visible {
+  display: flex;
+}
+
+.stj-ext-row {
+  display: flex;
+  gap: 2px;
+}
+
+.stj-ext-row .stj-ext-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 2px;
+  font-size: 10px;
+  font-weight: bold;
+  background-color: #4a5568;
+  color: #ffffff;
+  border: 1px solid #718096;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  line-height: 1.1;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+}
+
+.stj-ext-row .stj-ext-btn:hover {
+  background-color: #718096;
+}
+
+.stj-ext-row .stj-ext-btn:active {
+  background-color: #2d3748;
 }
 
 /* ===== ボタングループ ===== */
@@ -382,7 +438,7 @@
   display: none;
 }
 
-/* ===== 入力エリア（上下パディングを均等にして内容を20px上へシフト） ===== */
+/* ===== 入力エリア ===== */
 .stj-inputs-container {
   display: none;
   position: absolute;
@@ -397,14 +453,7 @@
   gap: 6px;
   justify-content: center;
   z-index: 10;
-  overflow: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.stj-inputs-container::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  overflow: visible;                /* ★ hidden → visible：拡張子パネルのため */
 }
 .stj-keyword-item.editing .stj-inputs-container {
   display: flex;
@@ -430,7 +479,7 @@
   min-width: 0;
 }
 
-/* ===== セル上部アクション行（決定・キャンセル）：❌ボタンの直右に密着配置 ===== */
+/* ===== セル上部アクション行（決定・キャンセル） ===== */
 .stj-inputs-container .stj-cell-action-row {
   position: absolute;
   top: 2px;
@@ -443,7 +492,6 @@
   padding: 0;
 }
 
-/* 決定・キャンセルボタン：❌ボタンと同じ縦幅36pxで統一、白地＋黒文字 */
 .stj-inputs-container .stj-cell-action-row .stj-apply-row,
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row {
   margin: 0 !important;
@@ -464,7 +512,6 @@
   line-height: 1;
 }
 
-/* 一番右のキャンセルボタンのみ右端を丸める */
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row {
   border-radius: 0 4px 4px 0;
 }
