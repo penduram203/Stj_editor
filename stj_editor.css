@@ -196,7 +196,7 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
 }
 #stj_test_section .stj-test-header > label {
@@ -221,72 +221,92 @@
   white-space: nowrap;
 }
 
+/* ===== 条件分岐の説明（リアルタイムテスト直下） ===== */
+#stj_test_section .stj-syntax-guide {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 24px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background-color: rgba(100, 181, 246, 0.06);
+  border-left: 3px solid #64b5f6;
+  border-radius: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #cbd5e0;
+}
+#stj_test_section .stj-syntax-guide > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#stj_test_section .stj-syntax-guide b {
+  color: #aed581;
+  font-weight: bold;
+  margin-right: 2px;
+}
+#stj_test_section .stj-syntax-guide code {
+  background-color: rgba(100, 181, 246, 0.18);
+  color: #90cdf4;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 11.5px;
+}
+
 /* ===== 上部エリア（特殊セル + 説明パネル） ===== */
 .stj-top-section {
   display: flex;
   gap: 20px;
   margin-bottom: 25px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 .stj-special-container {
   display: flex;
   gap: 12px;
   flex: 0 0 auto;
   justify-content: flex-start;
+  align-items: stretch;
 }
 .stj-info-panel {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 10px 16px;
+  padding: 16px 22px;
   background-color: #1a202c;
   border-radius: 8px;
   color: #e2e8f0;
   box-sizing: border-box;
   align-self: stretch;
+  min-height: 290px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .stj-info-note {
-  font-size: 13px;
+  font-size: 15px;
   color: #fbbf24;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
   font-weight: bold;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 .stj-info-guide h4 {
-  margin: 6px 0 4px 0;
-  font-size: 14px;
+  margin: 0 0 10px 0;
+  font-size: 17px;
   color: #64b5f6;
   font-weight: bold;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 .stj-info-guide ul {
-  margin: 0 0 4px 0;
-  padding-left: 18px;
-  font-size: 12.5px;
-  line-height: 1.45;
+  margin: 0;
+  padding-left: 22px;
+  font-size: 15px;
+  line-height: 1.7;
 }
 .stj-info-guide li {
-  margin-bottom: 1px;
+  margin-bottom: 4px;
 }
 .stj-info-guide b {
   color: #aed581;
-}
-.stj-info-guide code {
-  background-color: rgba(100, 181, 246, 0.15);
-  color: #90cdf4;
-  padding: 0 4px;
-  border-radius: 3px;
-  font-family: monospace;
-  font-size: 12px;
-}
-.stj-info-guide .stj-ex {
-  display: block;
-  color: #cbd5e0;
-  font-size: 11.5px;
-  margin-left: 2px;
-  line-height: 1.35;
-}
-.stj-info-guide .stj-guide-syntax li {
-  margin-bottom: 3px;
 }
 
 /* ===== キーワードセル ===== */
@@ -838,7 +858,8 @@
 @media (max-width: 1120px) {
   .stj-grid-container { grid-template-columns: repeat(3, 260px); min-width: 780px; }
   .stj-top-section { flex-direction: column; }
-  .stj-info-panel { width: 100%; }
+  .stj-info-panel { width: 100%; min-height: auto; }
+  #stj_test_section .stj-syntax-guide { grid-template-columns: 1fr; }
 }
 @media (max-width: 860px) {
   .stj-grid-container { grid-template-columns: repeat(2, 260px); min-width: 520px; }
