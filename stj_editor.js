@@ -786,7 +786,7 @@
         modal.style.position = 'fixed';
         modal.style.zIndex = '10001';
         modal.innerHTML = `
-            <div id="stj_test_section" style="position: sticky; top: 0; z-index: 100; background: #1e1e1e; border: 1px solid #555; padding: 10px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.6);">
+            <div id="stj_test_section" style="position: sticky; top: 0; z-index: 100; background: #1e1e1e; border: 1px solid #555; padding: 4px 8px 5px 8px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.6);">
                 <div class="stj-test-header">
                     <label>🔍 リアルタイムキーワード反応テスト</label>
                     <strong id="stj_char_name_display"></strong>
@@ -799,8 +799,8 @@
                     <span>複合例：<code>(山+川),(谷+村)</code> → 「山と川」または「谷と村」</span>
                     <span>複合例：<code>!(山,川)+道</code> → 山も川もなく、道がある時のみ</span>
                 </div>
-                <textarea id="stj_test_input" placeholder="試しに文章を入力してください（例：笑顔で挨拶する）..." style="width: 100%; height: 50px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea>
-                <div id="stj_test_result" style="margin-top: 6px; font-size: 13px; font-weight: bold; color: #aed581;">
+                <textarea id="stj_test_input" placeholder="試しに文章を入力してください（例：笑顔で挨拶する）..." style="width: 100%; height: 25px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 3px 6px; box-sizing: border-box; resize: vertical;"></textarea>
+                <div id="stj_test_result" style="margin-top: 3px; font-size: 13px; font-weight: bold; color: #aed581; line-height: 1.3;">
                     判定結果: <span style="color: #aaa; font-weight: normal;">文章を入力するとヒットするキーワードが表示されます</span>
                 </div>
             </div>
