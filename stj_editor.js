@@ -777,7 +777,6 @@
         `;
     }
 
-    // ★ ヘルプ用：詳細な条件分岐ガイド HTML
     function buildSyntaxGuideHtml() {
         return `
             <div class="stj-guide-section">
@@ -883,8 +882,8 @@
             <div id="stj_test_section">
                 <div class="stj-test-header">
                     <label>🔍 リアルタイムキーワード反応テスト</label>
-                    <button type="button" class="stj-help-btn" id="stj_help_button">ヘルプ</button>
                     <strong id="stj_char_name_display"></strong>
+                    <button type="button" class="stj-help-btn" id="stj_help_button">ヘルプ</button>
                 </div>
                 <div class="stj-syntax-guide" id="stj_syntax_guide">
                     ${buildSyntaxGuideHtml()}
