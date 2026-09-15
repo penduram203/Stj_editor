@@ -21,8 +21,8 @@
     const DRAG_THRESHOLD_PX = 5;
 
     // ===== 自動スクロール =====
-    const AUTOSCROLL_EDGE_PX = 200;    // ★ 150 → 200：早めにスクロール開始
-    const AUTOSCROLL_MAX_SPEED = 35;   // ★ 45 → 35
+    const AUTOSCROLL_EDGE_PX = 200;
+    const AUTOSCROLL_MAX_SPEED = 35;
     let autoScrollRAF = null;
     let autoScrollTarget = null;
     let autoScrollDelta = 0;
@@ -268,8 +268,28 @@
         );
     }
 
+    // ===== 編集スナップショット（キャンセル時に復元する元の値） =====
+    function saveEditSnapshot(item) {
+        if (!item) return;
+        const kw = item.querySelector('.stj-keyword-input');
+        const img = item.querySelector('.stj-image-input');
+        item.dataset.originalKeyword = kw ? kw.value : '';
+        item.dataset.originalImage = img ? img.value : '';
+    }
+
+    function restoreEditSnapshot(item) {
+        if (!item) return;
+        const kw = item.querySelector('.stj-keyword-input');
+        const img = item.querySelector('.stj-image-input');
+        if (kw && item.dataset.originalKeyword !== undefined) {
+            kw.value = item.dataset.originalKeyword;
+        }
+        if (img && item.dataset.originalImage !== undefined) {
+            img.value = item.dataset.originalImage;
+        }
+    }
+
     // ===== ダイアログ =====
-    // ★ message を引数で受け取るよう変更
     function showDeleteConfirmDialog(message, onConfirm, onCancel) {
         if (!confirmDialogEl) return;
         const msgEl = confirmDialogEl.querySelector('.stj-confirm-message');
@@ -523,6 +543,8 @@
                     return;
                 }
                 if (!src.classList.contains('editing')) {
+                    // ★ 編集開始時に現在の値を保存（キャンセル用）
+                    saveEditSnapshot(src);
                     src.classList.add('editing');
                 }
             }
@@ -568,7 +590,7 @@
         if (cancelBtn) cancelBtn.disabled = true;
         if (exportBtn) exportBtn.disabled = true;
 
-        document.querySelectorAll('.stj-keyword-item .stj-apply-row, .stj-keyword-item .stj-delete-row').forEach(btn => {
+        document.querySelectorAll('.stj-keyword-item .stj-apply-row, .stj-keyword-item .stj-cancel-row, .stj-keyword-item .stj-delete-row').forEach(btn => {
             btn.disabled = true;
         });
     }
@@ -604,7 +626,7 @@
         if (cancelBtn) cancelBtn.disabled = false;
         if (exportBtn) exportBtn.disabled = false;
 
-        document.querySelectorAll('.stj-keyword-item .stj-apply-row, .stj-keyword-item .stj-delete-row').forEach(btn => {
+        document.querySelectorAll('.stj-keyword-item .stj-apply-row, .stj-keyword-item .stj-cancel-row, .stj-keyword-item .stj-delete-row').forEach(btn => {
             btn.disabled = false;
         });
     }
@@ -674,7 +696,17 @@
         stjModalEl.style.display = 'none';
     }
 
-    const applyBtnStyle = 'margin-top: 6px; padding: 6px 14px; font-size: 13px; font-weight: bold; color: #000000; background-color: #e0e0e0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; display: inline-block; width: fit-content;';
+    const applyBtnStyle = 'margin: 0; padding: 5px 14px; font-size: 13px; font-weight: bold; color: #000000; background-color: #e0e0e0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; white-space: nowrap;';
+
+    // ★ セル上部アクション行（決定・キャンセル）の共通HTML
+    function buildCellActionRowHtml() {
+        return `
+            <div class="stj-cell-action-row">
+                <button type="button" class="stj-apply-row" style="${applyBtnStyle}">決定</button>
+                <button type="button" class="stj-cancel-row">キャンセル</button>
+            </div>
+        `;
+    }
 
     function createExportModal() {
         const existingModal = document.getElementById('stj_export_modal');
@@ -713,7 +745,7 @@
                             <label for="stj_default_image">ファイル名</label>
                             <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                             <div>
-                                <button type="button" class="stj-apply-special" data-target="default" style="${applyBtnStyle}">決定</button>
+                                <button type="button" class="stj-apply-special" data-target="default" style="margin-top: 6px; padding: 6px 14px; font-size: 13px; font-weight: bold; color: #000000; background-color: #e0e0e0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; display: inline-block; width: fit-content;">決定</button>
                             </div>
                         </div>
                     </div>
@@ -729,7 +761,7 @@
                             <label for="stj_thumbnail_image">ファイル名</label>
                             <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
                             <div>
-                                <button type="button" class="stj-apply-special" data-target="thumbnail" style="${applyBtnStyle}">決定</button>
+                                <button type="button" class="stj-apply-special" data-target="thumbnail" style="margin-top: 6px; padding: 6px 14px; font-size: 13px; font-weight: bold; color: #000000; background-color: #e0e0e0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; display: inline-block; width: fit-content;">決定</button>
                             </div>
                         </div>
                     </div>
@@ -741,6 +773,7 @@
                         <div class="stj-preview-text">プレビュー</div>
                     </div>
                     <div class="stj-inputs-container">
+                        ${buildCellActionRowHtml()}
                         <div class="stj-input-row">
                             <button class="stj-delete-row">×</button>
                             <div class="stj-input-group stj-keyword-width">
@@ -752,9 +785,6 @@
                             <div class="stj-input-group stj-image-width">
                                 <label for="stj_image_name_0">ファイル名</label>
                                 <input type="text" id="stj_image_name_0" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
-                                <div>
-                                    <button type="button" class="stj-apply-row" style="${applyBtnStyle}">決定</button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -911,6 +941,8 @@
         const firstItem = modal.querySelector('.stj-keyword-item');
         if (firstItem) {
             attachKeywordRowListeners(firstItem, 0);
+            // ★ 初期セルも編集状態なのでスナップショットを保存
+            saveEditSnapshot(firstItem);
         }
 
         installPointerDragHandlers();
@@ -930,7 +962,6 @@
     }
 
     // ===== 一括削除の実行フロー =====
-    // ★ メッセージダイアログを1秒表示 → 確認ダイアログ
     function executeBulkDelete() {
         const marked = document.querySelectorAll('.stj-keyword-item.stj-marked-for-delete');
         if (marked.length === 0) return;
@@ -942,16 +973,13 @@
         if (delCancelBtn) delCancelBtn.disabled = true;
         if (delExecBtn) delExecBtn.disabled = true;
 
-        // 1秒間メッセージを表示
         showMessageDialog('選択されたセルを一括削除します');
 
         setTimeout(() => {
             hideMessageDialog();
 
-            // 確認ダイアログを表示
             showDeleteConfirmDialog(
                 '本当に一括削除しますか？',
-                // はい：削除実行
                 () => {
                     isDialogActive = false;
                     if (delCancelBtn) delCancelBtn.disabled = false;
@@ -961,7 +989,6 @@
                     targets.forEach(el => el.remove());
                     runLiveTest();
                 },
-                // いいえ：選択状態を保持したまま復帰
                 () => {
                     isDialogActive = false;
                     if (delCancelBtn) delCancelBtn.disabled = false;
@@ -1024,7 +1051,6 @@
             deleteButton.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (isBulkDeleteMode || isDialogActive) return;
-                // ★ 個別削除の文言を指定
                 showDeleteConfirmDialog('本当に削除しますか？', () => {
                     item.remove();
                     runLiveTest();
@@ -1032,6 +1058,7 @@
             });
         }
 
+        // ★ 決定ボタン：変更を反映して編集終了
         const applyButton = item.querySelector('.stj-apply-row');
         if (applyButton) {
             applyButton.addEventListener('click', function(e) {
@@ -1039,6 +1066,18 @@
                 if (isBulkDeleteMode || isDialogActive) return;
                 updateSinglePreviewByItem(item);
                 item.classList.remove('editing');
+            });
+        }
+
+        // ★ キャンセルボタン：変更を破棄して編集終了
+        const cancelButton = item.querySelector('.stj-cancel-row');
+        if (cancelButton) {
+            cancelButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (isBulkDeleteMode || isDialogActive) return;
+                restoreEditSnapshot(item);
+                item.classList.remove('editing');
+                runLiveTest();
             });
         }
 
@@ -1052,6 +1091,7 @@
                 if (isBulkDeleteMode || isDialogActive) return;
                 e.preventDefault();
                 e.stopPropagation();
+                // Enter は「決定」と同じ動作
                 updateSinglePreviewByItem(item);
                 item.classList.remove('editing');
             });
@@ -1125,6 +1165,7 @@
                 <div class="stj-preview-text">プレビュー</div>
             </div>
             <div class="stj-inputs-container">
+                ${buildCellActionRowHtml()}
                 <div class="stj-input-row">
                     <button class="stj-delete-row">×</button>
                     <div class="stj-input-group stj-keyword-width">
@@ -1136,9 +1177,6 @@
                     <div class="stj-input-group stj-image-width">
                         <label for="stj_image_name_${itemCount}">ファイル名</label>
                         <input type="text" id="stj_image_name_${itemCount}" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
-                        <div>
-                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">決定</button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1146,6 +1184,8 @@
         container.appendChild(newItem);
 
         attachKeywordRowListeners(newItem, itemCount);
+        // ★ 新規セルは初期編集状態なのでスナップショットを保存
+        saveEditSnapshot(newItem);
 
         modal.scrollTop = modal.scrollHeight;
         setTimeout(() => updateSinglePreviewByItem(newItem), 100);
@@ -1490,6 +1530,7 @@
                 <div class="stj-preview-text">プレビュー</div>
             </div>
             <div class="stj-inputs-container">
+                ${buildCellActionRowHtml()}
                 <div class="stj-input-row">
                     <button class="stj-delete-row">×</button>
                     <div class="stj-input-group stj-keyword-width">
@@ -1501,9 +1542,6 @@
                     <div class="stj-input-group stj-image-width">
                         <label for="stj_image_name_${index}">ファイル名</label>
                         <input type="text" id="stj_image_name_${index}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り">
-                        <div>
-                            <button type="button" class="stj-apply-row" style="${applyBtnStyle}">決定</button>
-                        </div>
                     </div>
                 </div>
             </div>
