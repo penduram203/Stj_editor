@@ -278,8 +278,6 @@
                     <button type="button" class="stj-ext-btn" data-ext=".webp,">webp</button>
                     <button type="button" class="stj-ext-btn" data-ext=".gif,">gif</button>
                     <button type="button" class="stj-ext-btn" data-ext=".avif,">avif</button>
-                </div>
-                <div class="stj-ext-row">
                     <button type="button" class="stj-ext-btn" data-ext=".mp4,">mp4</button>
                     <button type="button" class="stj-ext-btn" data-ext=".webm,">webm</button>
                 </div>
