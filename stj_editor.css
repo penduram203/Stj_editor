@@ -417,10 +417,18 @@
   margin-bottom: 0;
   min-width: 0;
 }
+
+/* ===== 決定ボタン：セル上部の中央（❌ボタンと番号の間）に配置 ===== */
 .stj-inputs-container .stj-apply-row {
-  margin-top: 6px !important;
-  padding: 7px 18px !important;
-  font-size: 14px !important;
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0 !important;
+  padding: 5px 18px !important;
+  font-size: 13px !important;
+  z-index: 20;
+  white-space: nowrap;
 }
 
 /* ===== 編集モード時は左右の切り替えボタンを隠す ===== */
@@ -603,7 +611,7 @@
   background-color: #2d3748;
 }
 
-/* ===== メッセージダイアログ（ボタンなし） ===== */
+/* ===== メッセージダイアログ ===== */
 #stj_message_dialog {
   position: fixed;
   top: 0;
