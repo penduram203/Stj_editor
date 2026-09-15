@@ -273,17 +273,15 @@
         return `
             <div class="stj-extension-buttons">
                 <div class="stj-ext-row">
-                    <button type="button" class="stj-ext-btn" data-ext=".png,">.png</button>
-                    <button type="button" class="stj-ext-btn" data-ext=".jpg,">.jpg</button>
-                    <button type="button" class="stj-ext-btn" data-ext=".jpeg,">.jpeg</button>
-                    <button type="button" class="stj-ext-btn" data-ext=".webp,">.webp</button>
-                    <button type="button" class="stj-ext-btn" data-ext=".gif,">.gif</button>
-                    <button type="button" class="stj-ext-btn" data-ext=".avif,">.avif</button>
-                    <button type="button" class="stj-ext-btn" data-ext=".bmp,">.bmp</button>
+                    <button type="button" class="stj-ext-btn" data-ext=".png,">png</button>
+                    <button type="button" class="stj-ext-btn" data-ext=".jpg,">jpg</button>
+                    <button type="button" class="stj-ext-btn" data-ext=".webp,">webp</button>
+                    <button type="button" class="stj-ext-btn" data-ext=".gif,">gif</button>
+                    <button type="button" class="stj-ext-btn" data-ext=".avif,">avif</button>
                 </div>
                 <div class="stj-ext-row">
-                    <button type="button" class="stj-ext-btn" data-ext=".mp4,">.mp4</button>
-                    <button type="button" class="stj-ext-btn" data-ext=".webm,">.webm</button>
+                    <button type="button" class="stj-ext-btn" data-ext=".mp4,">mp4</button>
+                    <button type="button" class="stj-ext-btn" data-ext=".webm,">webm</button>
                 </div>
             </div>
         `;
