@@ -191,7 +191,7 @@
   pointer-events: none !important;
 }
 
-/* ===== リアルタイムキーワード反応テスト ヘッダー（キャラクター名を右隣に配置） ===== */
+/* ===== リアルタイムキーワード反応テスト ヘッダー ===== */
 #stj_test_section .stj-test-header {
   display: flex;
   align-items: center;
@@ -237,7 +237,7 @@
 .stj-info-panel {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 12px 18px;
+  padding: 10px 16px;
   background-color: #1a202c;
   border-radius: 8px;
   color: #e2e8f0;
@@ -247,27 +247,46 @@
 .stj-info-note {
   font-size: 13px;
   color: #fbbf24;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   font-weight: bold;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 .stj-info-guide h4 {
-  margin: 0 0 8px 0;
-  font-size: 15px;
+  margin: 6px 0 4px 0;
+  font-size: 14px;
   color: #64b5f6;
   font-weight: bold;
+  line-height: 1.2;
 }
 .stj-info-guide ul {
-  margin: 0;
-  padding-left: 20px;
-  font-size: 13px;
-  line-height: 1.7;
+  margin: 0 0 4px 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 .stj-info-guide li {
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 .stj-info-guide b {
   color: #aed581;
+}
+.stj-info-guide code {
+  background-color: rgba(100, 181, 246, 0.15);
+  color: #90cdf4;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 12px;
+}
+.stj-info-guide .stj-ex {
+  display: block;
+  color: #cbd5e0;
+  font-size: 11.5px;
+  margin-left: 2px;
+  line-height: 1.35;
+}
+.stj-info-guide .stj-guide-syntax li {
+  margin-bottom: 3px;
 }
 
 /* ===== キーワードセル ===== */
@@ -818,7 +837,6 @@
 }
 @media (max-width: 1120px) {
   .stj-grid-container { grid-template-columns: repeat(3, 260px); min-width: 780px; }
-  /* 上部エリアを縦並びに */
   .stj-top-section { flex-direction: column; }
   .stj-info-panel { width: 100%; }
 }
