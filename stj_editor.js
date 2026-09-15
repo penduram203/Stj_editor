@@ -318,7 +318,6 @@
             panel.classList.remove('stj-visible');
         });
 
-        // パネル内の mousedown でデフォルト動作（フォーカス移動）を抑止
         panel.addEventListener('mousedown', (e) => {
             e.preventDefault();
         });
@@ -839,7 +838,7 @@
                     <div class="stj-info-note">※複数ファイルはカンマ区切りで入力（例: image1,video1,image2）</div>
                     <div class="stj-info-guide">
                         <h4>📖 操作方法</h4>
-                        <ul>
+                        <ul class="stj-guide-ops">
                             <li><b>セルをクリック</b>：編集モードに入り、キーワードとファイル名を編集できます</li>
                             <li><b>セルをドラッグ</b>：他のセルと位置を入れ替えられます</li>
                             <li><b>プレビューの左右ボタン</b>：複数ファイルを切り替えられます</li>
@@ -847,6 +846,15 @@
                             <li><b>ファイル名入力欄をフォーカス</b>：拡張子入力ボタンが出現します</li>
                             <li><b>一括削除</b>：複数のセルを選択してまとめて削除します</li>
                             <li><b>キーワード追加</b>：新しいセルを追加します</li>
+                        </ul>
+                        <h4>🧩 キーワードの条件分岐</h4>
+                        <ul class="stj-guide-syntax">
+                            <li><b>+</b>：AND（全て含む）<span class="stj-ex">例：<code>山+川</code> → 山と川が同時に登場</span></li>
+                            <li><b>,</b>：OR（いずれか含む）<span class="stj-ex">例：<code>山,川</code> → 山または川のどちらか</span></li>
+                            <li><b>!</b>：NOT（除外）<span class="stj-ex">例：<code>!山</code> → 山を含まない時のみ</span></li>
+                            <li><b>( )</b>：グループ化（入れ子可）</li>
+                            <li><b>複合例</b>：<code>(山+川),(谷+村)</code> → 「山と川」または「谷と村」</li>
+                            <li><b>複合例</b>：<code>!(山,川)+道</code> → 山も川もなく、道がある時のみ</li>
                         </ul>
                     </div>
                 </div>
