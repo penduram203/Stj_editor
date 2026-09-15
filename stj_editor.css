@@ -97,7 +97,7 @@
 .stj-ext-row .stj-ext-btn {
   flex: 0 0 auto;
   min-width: 0;
-  padding: 3px 2px;         /* ★ 3px 6px → 3px 2px：左右の内部余白を縮小 */
+  padding: 3px 2px 6px 6px;         /* ★ 3px 6px → 3px 2px：左右の内部余白を縮小 */
   font-size: 12px;          /* 文字サイズは維持 */
   font-weight: bold;
   background-color: #4a5568;
