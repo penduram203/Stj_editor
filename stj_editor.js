@@ -777,6 +777,99 @@
         `;
     }
 
+    // ★ ヘルプ用：詳細な条件分岐ガイド HTML
+    function buildSyntaxGuideHtml() {
+        return `
+            <div class="stj-guide-section">
+                <div class="stj-guide-section-title">🔧 基本演算子</div>
+                <ul class="stj-guide-list">
+                    <li>
+                        <code class="stj-op">+</code> <b>AND</b>（全て含む）
+                        <div class="stj-op-ex">
+                            例：<code>山+川</code> → 文章に「山」と「川」の両方が含まれる時にマッチ
+                        </div>
+                    </li>
+                    <li>
+                        <code class="stj-op">,</code> <b>OR</b>（いずれか含む）
+                        <div class="stj-op-ex">
+                            例：<code>山,川</code> → 文章に「山」または「川」のどちらかが含まれる時にマッチ
+                        </div>
+                    </li>
+                    <li>
+                        <code class="stj-op">!</code> <b>NOT</b>（除外）
+                        <div class="stj-op-ex">
+                            例：<code>!山</code> → 文章に「山」が含まれていない時にのみマッチ
+                        </div>
+                    </li>
+                    <li>
+                        <code class="stj-op">( )</code> <b>グループ化</b>（入れ子可能）
+                        <div class="stj-op-ex">
+                            例：<code>(山+川),谷</code> → 「山と川」または「谷」のいずれかにマッチ
+                        </div>
+                    </li>
+                    <li>
+                        <code class="stj-op">and</code> <code class="stj-op">or</code> <code class="stj-op">not</code> <b>単語形式も使用可</b>
+                        <div class="stj-op-ex">
+                            例：<code>山 and 川</code> は <code>山+川</code> と同じ意味になります
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="stj-guide-section">
+                <div class="stj-guide-section-title">🧪 複合例（実践的な条件式）</div>
+                <ul class="stj-guide-list">
+                    <li>
+                        <code>(山+川),(谷+村)</code>
+                        <div class="stj-op-ex">
+                            「山と川」または「谷と村」のいずれかにマッチします
+                        </div>
+                    </li>
+                    <li>
+                        <code>!(山,川)+道</code>
+                        <div class="stj-op-ex">
+                            「山」も「川」も含まず、かつ「道」が含まれる時にマッチします
+                        </div>
+                    </li>
+                    <li>
+                        <code>(笑+嬉)+!(泣+悲)</code>
+                        <div class="stj-op-ex">
+                            「笑」と「嬉」の両方を含み、かつ「泣」も「悲」も含まない時にマッチします
+                        </div>
+                    </li>
+                    <li>
+                        <code>!(犬,猫,鳥),ペット</code>
+                        <div class="stj-op-ex">
+                            「犬」「猫」「鳥」のいずれも含まず、「ペット」を含む時にマッチします
+                        </div>
+                    </li>
+                    <li>
+                        <code>((山+川)+(谷+村)),海</code>
+                        <div class="stj-op-ex">
+                            カッコは入れ子にできます。「山と川と谷と村」の全部、または「海」にマッチします
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="stj-guide-section">
+                <div class="stj-guide-section-title">💡 ヒント</div>
+                <ul class="stj-guide-list">
+                    <li>
+                        <b>複雑な条件ほど優先</b>
+                        <div class="stj-op-ex">
+                            同じ文章に複数の条件がマッチした場合、より複雑な条件が優先されます
+                        </div>
+                    </li>
+                    <li>
+                        <b>NOT単独でも使用可</b>
+                        <div class="stj-op-ex">
+                            <code>!民家</code> のように、除外条件だけを指定することもできます
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        `;
+    }
+
     function createExportModal() {
         const existingModal = document.getElementById('stj_export_modal');
         if (existingModal) existingModal.remove();
@@ -794,12 +887,7 @@
                     <strong id="stj_char_name_display"></strong>
                 </div>
                 <div class="stj-syntax-guide" id="stj_syntax_guide">
-                    <span><b>+</b>：AND（全て含む）　例：<code>山+川</code> → 山と川が同時に登場</span>
-                    <span><b>,</b>：OR（いずれか含む）　例：<code>山,川</code> → 山または川のどちらか</span>
-                    <span><b>!</b>：NOT（除外）　例：<code>!山</code> → 山を含まない時のみ</span>
-                    <span><b>( )</b>：グループ化（入れ子可）</span>
-                    <span>複合例：<code>(山+川),(谷+村)</code> → 「山と川」または「谷と村」</span>
-                    <span>複合例：<code>!(山,川)+道</code> → 山も川もなく、道がある時のみ</span>
+                    ${buildSyntaxGuideHtml()}
                 </div>
                 <textarea id="stj_test_input" placeholder="試しに文章を入力してください（例：笑顔で挨拶する）..."></textarea>
                 <div id="stj_test_result">
@@ -953,7 +1041,6 @@
             testInput.addEventListener('input', runLiveTest);
         }
 
-        // ★ ヘルプボタンのトグル
         const helpBtn = document.getElementById('stj_help_button');
         const syntaxGuide = document.getElementById('stj_syntax_guide');
         if (helpBtn && syntaxGuide) {
@@ -963,7 +1050,6 @@
             });
         }
 
-        // ★ ヘルプ外側クリックで閉じる（capture-phase で modal の stopPropagation を回避）
         if (!helpOutsideHandlerInstalled) {
             helpOutsideHandlerInstalled = true;
             document.addEventListener('click', (e) => {
