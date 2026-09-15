@@ -385,7 +385,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 6px 10px 48px 10px;   /* ★ 下パディングを8px→48pxへ拡大 */
+  padding: 6px 10px 88px 10px;   /* ★ 下パディングを 48px → 88px（+40で内容が20px上へ） */
   padding-top: 48px;
   box-sizing: border-box;
   flex-direction: column;
@@ -422,8 +422,8 @@
 .stj-inputs-container .stj-cell-action-row {
   position: absolute;
   top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 36px;              /* ★ 中央寄せ → ❌ボタン直右（❌はleft:2px、幅30px） */
+  transform: none;         /* ★ 中央寄せ解除 */
   display: flex;
   gap: 6px;
   align-items: center;
