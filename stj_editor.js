@@ -791,6 +791,14 @@
                     <label>🔍 リアルタイムキーワード反応テスト</label>
                     <strong id="stj_char_name_display"></strong>
                 </div>
+                <div class="stj-syntax-guide">
+                    <span><b>+</b>：AND（全て含む）　例：<code>山+川</code> → 山と川が同時に登場</span>
+                    <span><b>,</b>：OR（いずれか含む）　例：<code>山,川</code> → 山または川のどちらか</span>
+                    <span><b>!</b>：NOT（除外）　例：<code>!山</code> → 山を含まない時のみ</span>
+                    <span><b>( )</b>：グループ化（入れ子可）</span>
+                    <span>複合例：<code>(山+川),(谷+村)</code> → 「山と川」または「谷と村」</span>
+                    <span>複合例：<code>!(山,川)+道</code> → 山も川もなく、道がある時のみ</span>
+                </div>
                 <textarea id="stj_test_input" placeholder="試しに文章を入力してください（例：笑顔で挨拶する）..." style="width: 100%; height: 50px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea>
                 <div id="stj_test_result" style="margin-top: 6px; font-size: 13px; font-weight: bold; color: #aed581;">
                     判定結果: <span style="color: #aaa; font-weight: normal;">文章を入力するとヒットするキーワードが表示されます</span>
@@ -846,15 +854,6 @@
                             <li><b>ファイル名入力欄をフォーカス</b>：拡張子入力ボタンが出現します</li>
                             <li><b>一括削除</b>：複数のセルを選択してまとめて削除します</li>
                             <li><b>キーワード追加</b>：新しいセルを追加します</li>
-                        </ul>
-                        <h4>🧩 キーワードの条件分岐</h4>
-                        <ul class="stj-guide-syntax">
-                            <li><b>+</b>：AND（全て含む）<span class="stj-ex">例：<code>山+川</code> → 山と川が同時に登場</span></li>
-                            <li><b>,</b>：OR（いずれか含む）<span class="stj-ex">例：<code>山,川</code> → 山または川のどちらか</span></li>
-                            <li><b>!</b>：NOT（除外）<span class="stj-ex">例：<code>!山</code> → 山を含まない時のみ</span></li>
-                            <li><b>( )</b>：グループ化（入れ子可）</li>
-                            <li><b>複合例</b>：<code>(山+川),(谷+村)</code> → 「山と川」または「谷と村」</li>
-                            <li><b>複合例</b>：<code>!(山,川)+道</code> → 山も川もなく、道がある時のみ</li>
                         </ul>
                     </div>
                 </div>
