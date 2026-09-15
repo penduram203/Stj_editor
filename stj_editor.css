@@ -131,7 +131,7 @@
   flex-grow: 0.7;
 }
 .stj-ext-row .stj-ext-btn[data-ext=".webm,"] {
-  flex-grow: 1.5;
+  flex-grow: 1.3;
 }
 
 .stj-ext-row .stj-ext-btn:hover {
