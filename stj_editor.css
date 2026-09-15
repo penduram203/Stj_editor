@@ -204,7 +204,7 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
-/* ヘッダー行 */
+/* ヘッダー行：左から「テスト」→「キャラ名」→「ヘルプ」の順で左詰め */
 #stj_test_section .stj-test-header {
   display: flex;
   align-items: center;
@@ -219,6 +219,25 @@
   margin: 0;
   font-size: 17px;
   line-height: 1.2;
+}
+
+/* キャラクター名（左詰め：マージン自動なし） */
+#stj_char_name_display {
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+  text-shadow:
+    1px 0 0 #000000,
+    -1px 0 0 #000000,
+    0 1px 0 #000000,
+    0 -1px 0 #000000,
+    1px 1px 0 #000000,
+    -1px 1px 0 #000000,
+    1px -1px 0 #000000,
+    -1px -1px 0 #000000;
+  white-space: nowrap;
 }
 
 /* ヘルプボタン */
@@ -242,26 +261,6 @@
 }
 #stj_test_section .stj-help-btn:active {
   background-color: #2d3748;
-}
-
-/* キャラクター名（右端寄せ） */
-#stj_char_name_display {
-  margin-left: auto;
-  font-size: 18px;
-  font-weight: 900;
-  color: #ffffff;
-  letter-spacing: 0.5px;
-  line-height: 1.2;
-  text-shadow:
-    1px 0 0 #000000,
-    -1px 0 0 #000000,
-    0 1px 0 #000000,
-    0 -1px 0 #000000,
-    1px 1px 0 #000000,
-    -1px 1px 0 #000000,
-    1px -1px 0 #000000,
-    -1px -1px 0 #000000;
-  white-space: nowrap;
 }
 
 /* ===== 条件分岐の詳細ガイド（ヘルプで表示） ===== */
