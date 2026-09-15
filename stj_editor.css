@@ -418,17 +418,47 @@
   min-width: 0;
 }
 
-/* ===== 決定ボタン：セル上部の中央（❌ボタンと番号の間）に配置 ===== */
-.stj-inputs-container .stj-apply-row {
+/* ===== セル上部アクション行（決定・キャンセル）：中央寄せ ===== */
+.stj-inputs-container .stj-cell-action-row {
   position: absolute;
   top: 4px;
   left: 50%;
   transform: translateX(-50%);
-  margin: 0 !important;
-  padding: 5px 18px !important;
-  font-size: 13px !important;
+  display: flex;
+  gap: 6px;
+  align-items: center;
   z-index: 20;
+  margin: 0;
+  padding: 0;
+}
+
+.stj-inputs-container .stj-cell-action-row .stj-apply-row,
+.stj-inputs-container .stj-cell-action-row .stj-cancel-row {
+  margin: 0 !important;
+  padding: 5px 14px !important;
+  font-size: 13px !important;
+  font-weight: bold;
   white-space: nowrap;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid #aaa;
+}
+
+.stj-inputs-container .stj-cell-action-row .stj-apply-row {
+  background-color: #e0e0e0;
+  color: #000000;
+}
+.stj-inputs-container .stj-cell-action-row .stj-apply-row:hover {
+  background-color: #c8c8c8;
+}
+
+.stj-inputs-container .stj-cell-action-row .stj-cancel-row {
+  background-color: #e53e3e;
+  color: #ffffff;
+  border-color: #c53030;
+}
+.stj-inputs-container .stj-cell-action-row .stj-cancel-row:hover {
+  background-color: #c53030;
 }
 
 /* ===== 編集モード時は左右の切り替えボタンを隠す ===== */
