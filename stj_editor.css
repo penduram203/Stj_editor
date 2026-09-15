@@ -377,6 +377,11 @@
   pointer-events: none;
 }
 
+/* ===== 一括削除モード時はテスト枠を完全非表示 ===== */
+#stj_export_modal.stj-bulk-delete-mode #stj_test_section {
+  display: none;
+}
+
 /* ===== 入力エリア（上下パディングを均等にして内容を20px上へシフト） ===== */
 .stj-inputs-container {
   display: none;
@@ -392,16 +397,15 @@
   gap: 6px;
   justify-content: center;
   z-index: 10;
-  overflow: hidden;               /* ★ auto → hidden：スクロールバーを出さない */
-  scrollbar-width: none;          /* Firefox 用 */
-  -ms-overflow-style: none;       /* IE/Edge 用 */
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .stj-inputs-container::-webkit-scrollbar {
-  display: none;                  /* Chrome/Safari 用 */
+  display: none;
   width: 0;
   height: 0;
 }
-
 .stj-keyword-item.editing .stj-inputs-container {
   display: flex;
 }
@@ -426,34 +430,43 @@
   min-width: 0;
 }
 
-/* ===== セル上部アクション行（決定・キャンセル）：中央寄せ ===== */
+/* ===== セル上部アクション行（決定・キャンセル）：❌ボタンの直右に密着配置 ===== */
 .stj-inputs-container .stj-cell-action-row {
   position: absolute;
-  top: 4px;
-  left: 36px;              /* ★ 中央寄せ → ❌ボタン直右（❌はleft:2px、幅30px） */
-  transform: none;         /* ★ 中央寄せ解除 */
+  top: 2px;
+  left: 32px;
   display: flex;
-  gap: 6px;
+  gap: 0;
   align-items: center;
   z-index: 20;
   margin: 0;
   padding: 0;
 }
 
-/* 決定・キャンセル両ボタン：共通で白地＋黒文字 */
+/* 決定・キャンセルボタン：❌ボタンと同じ縦幅30pxで統一、白地＋黒文字 */
 .stj-inputs-container .stj-cell-action-row .stj-apply-row,
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row {
   margin: 0 !important;
-  padding: 2px 8px !important;    /* ★ 5px 14px → 2px 8px：ボタンサイズを縮小 */
-  font-size: 13px !important;     /* フォントサイズは維持 */
+  padding: 0 12px !important;
+  height: 30px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px !important;
   font-weight: bold;
   white-space: nowrap;
-  border-radius: 4px;
   cursor: pointer;
   background-color: #e0e0e0;
   color: #000000;
   border: 1px solid #aaa;
-  line-height: 1.4;
+  border-radius: 0;
+  line-height: 1;
+}
+
+/* 一番右のキャンセルボタンのみ右端を丸める */
+.stj-inputs-container .stj-cell-action-row .stj-cancel-row {
+  border-radius: 0 4px 4px 0;
 }
 
 .stj-inputs-container .stj-cell-action-row .stj-apply-row:hover,
