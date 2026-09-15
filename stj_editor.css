@@ -91,16 +91,16 @@
 
 .stj-ext-row {
   display: flex;
-  gap: 0;                        /* 横方向の余白ゼロ */
+  gap: 0;
 }
 
 .stj-ext-row .stj-ext-btn {
   box-sizing: border-box;
-  flex: 1 1 0;                   /* ★ 均等に幅を分配 */
-  aspect-ratio: 1 / 1;           /* ★ 正方形を維持（幅と高さを一致） */
+  flex: 1 1 0;                   /* デフォルトの比率 = 1 */
+  height: 32px;                  /* 固定の高さ（横並びの統一） */
   min-width: 0;
   padding: 0;
-  font-size: 14px;               /* ★ 12px → 14px：ボタン拡大に合わせる */
+  font-size: 14px;               /* 文字サイズは維持 */
   font-weight: bold;
   background-color: #4a5568;
   color: #ffffff;
@@ -116,6 +116,18 @@
   user-select: none;
   -moz-user-select: none;
   -webkit-user-select: none;
+}
+
+/* ★ jpg / gif：横幅を狭く */
+.stj-ext-row .stj-ext-btn[data-ext=".jpg,"],
+.stj-ext-row .stj-ext-btn[data-ext=".gif,"] {
+  flex-grow: 0.7;
+}
+
+/* ★ webp / webm：横幅を広く */
+.stj-ext-row .stj-ext-btn[data-ext=".webp,"],
+.stj-ext-row .stj-ext-btn[data-ext=".webm,"] {
+  flex-grow: 1.5;
 }
 
 .stj-ext-row .stj-ext-btn:hover {
