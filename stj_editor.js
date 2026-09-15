@@ -319,7 +319,6 @@
         });
 
         // パネル内の mousedown でデフォルト動作（フォーカス移動）を抑止
-        // → ボタンを押してもファイル名入力欄のフォーカスとカーソル位置が維持される
         panel.addEventListener('mousedown', (e) => {
             e.preventDefault();
         });
@@ -330,9 +329,7 @@
                 e.preventDefault();
                 const ext = btn.getAttribute('data-ext') || '';
                 insertTextAtCursor(input, ext);
-                // 念のため再フォーカス
                 try { input.focus(); } catch (err) { /* ignore */ }
-                // input イベントを発火させて runLiveTest を呼ぶ
                 try {
                     input.dispatchEvent(new Event('input', { bubbles: true }));
                 } catch (err) {
@@ -790,54 +787,67 @@
         modal.style.position = 'fixed';
         modal.style.zIndex = '10001';
         modal.innerHTML = `
-            <div class="stj-header" style="margin-bottom: 15px;">
-                <strong id="stj_char_name_display" style="font-size: 24px; font-weight: bold; color: white; text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);"></strong>
-                <div style="color: #ccc; font-size: 12px; margin-top: 5px;">※複数ファイルはカンマ区切りで入力（例: image1,video1,image2）</div>
-            </div>
-
             <div id="stj_test_section" style="position: sticky; top: 0; z-index: 100; background: #1e1e1e; border: 1px solid #555; padding: 10px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.6);">
-                <label style="font-weight: bold; color: #64b5f6; display: block; margin-bottom: 5px;">
-                    🔍 リアルタイムキーワード反応テスト
-                </label>
+                <div class="stj-test-header">
+                    <label>🔍 リアルタイムキーワード反応テスト</label>
+                    <strong id="stj_char_name_display"></strong>
+                </div>
                 <textarea id="stj_test_input" placeholder="試しに文章を入力してください（例：笑顔で挨拶する）..." style="width: 100%; height: 50px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 6px; box-sizing: border-box; resize: vertical;"></textarea>
                 <div id="stj_test_result" style="margin-top: 6px; font-size: 13px; font-weight: bold; color: #aed581;">
                     判定結果: <span style="color: #aaa; font-weight: normal;">文章を入力するとヒットするキーワードが表示されます</span>
                 </div>
             </div>
 
-            <div class="stj-special-container">
-                <div class="stj-special-item">
-                    <div class="stj-special-preview">
-                        <div class="stj-image-preview" id="stj_preview_default" style="position: relative;">
-                            <div class="stj-preview-text">デフォルトメディアプレビュー</div>
+            <div class="stj-top-section">
+                <div class="stj-special-container">
+                    <div class="stj-special-item">
+                        <div class="stj-special-preview">
+                            <div class="stj-image-preview" id="stj_preview_default" style="position: relative;">
+                                <div class="stj-preview-text">デフォルトメディアプレビュー</div>
+                            </div>
+                        </div>
+                        <div class="stj-special-inputs">
+                            <div class="stj-input-group">
+                                <label for="stj_default_image">ファイル名</label>
+                                <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                                ${buildExtensionButtonsHtml()}
+                                <div>
+                                    <button type="button" class="stj-apply-special" data-target="default" style="${applyBtnStyle}">決定</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="stj-special-inputs">
-                        <div class="stj-input-group">
-                            <label for="stj_default_image">ファイル名</label>
-                            <input type="text" id="stj_default_image" value="defa" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
-                            ${buildExtensionButtonsHtml()}
-                            <div>
-                                <button type="button" class="stj-apply-special" data-target="default" style="${applyBtnStyle}">決定</button>
+                    <div class="stj-special-item">
+                        <div class="stj-special-preview">
+                            <div class="stj-image-preview" id="stj_preview_thumbnail" style="position: relative;">
+                                <div class="stj-preview-text">サムネイルプレビュー</div>
+                            </div>
+                        </div>
+                        <div class="stj-special-inputs">
+                            <div class="stj-input-group">
+                                <label for="stj_thumbnail_image">ファイル名</label>
+                                <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
+                                ${buildExtensionButtonsHtml()}
+                                <div>
+                                    <button type="button" class="stj-apply-special" data-target="thumbnail" style="${applyBtnStyle}">決定</button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="stj-special-item">
-                    <div class="stj-special-preview">
-                        <div class="stj-image-preview" id="stj_preview_thumbnail" style="position: relative;">
-                            <div class="stj-preview-text">サムネイルプレビュー</div>
-                        </div>
-                    </div>
-                    <div class="stj-special-inputs">
-                        <div class="stj-input-group">
-                            <label for="stj_thumbnail_image">ファイル名</label>
-                            <input type="text" id="stj_thumbnail_image" value="thum" class="stj-image-input" placeholder="複数ファイルはカンマ区切り">
-                            ${buildExtensionButtonsHtml()}
-                            <div>
-                                <button type="button" class="stj-apply-special" data-target="thumbnail" style="${applyBtnStyle}">決定</button>
-                            </div>
-                        </div>
+                <div class="stj-info-panel">
+                    <div class="stj-info-note">※複数ファイルはカンマ区切りで入力（例: image1,video1,image2）</div>
+                    <div class="stj-info-guide">
+                        <h4>📖 操作方法</h4>
+                        <ul>
+                            <li><b>セルをクリック</b>：編集モードに入り、キーワードとファイル名を編集できます</li>
+                            <li><b>セルをドラッグ</b>：他のセルと位置を入れ替えられます</li>
+                            <li><b>プレビューの左右ボタン</b>：複数ファイルを切り替えられます</li>
+                            <li><b>❌ボタン</b>：セルを削除します（確認あり）</li>
+                            <li><b>ファイル名入力欄をフォーカス</b>：拡張子入力ボタンが出現します</li>
+                            <li><b>一括削除</b>：複数のセルを選択してまとめて削除します</li>
+                            <li><b>キーワード追加</b>：新しいセルを追加します</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -1013,7 +1023,6 @@
             });
         });
 
-        // ★ 拡張子ボタンのセットアップ（特殊セル）
         setupExtensionButtons(document.getElementById('stj_default_image'));
         setupExtensionButtons(document.getElementById('stj_thumbnail_image'));
 
@@ -1172,7 +1181,6 @@
             });
         });
 
-        // ★ 拡張子入力ボタンのセットアップ
         const imageInput = item.querySelector('.stj-image-input');
         if (imageInput) {
             setupExtensionButtons(imageInput);
