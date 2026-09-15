@@ -385,15 +385,23 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 6px 10px 88px 10px;   /* ★ 下パディングを 48px → 88px（+40で内容が20px上へ） */
+  padding: 6px 10px 88px 10px;
   padding-top: 48px;
   box-sizing: border-box;
   flex-direction: column;
   gap: 6px;
   justify-content: center;
   z-index: 10;
-  overflow-y: auto;
+  overflow: hidden;               /* ★ auto → hidden：スクロールバーを出さない */
+  scrollbar-width: none;          /* Firefox 用 */
+  -ms-overflow-style: none;       /* IE/Edge 用 */
 }
+.stj-inputs-container::-webkit-scrollbar {
+  display: none;                  /* Chrome/Safari 用 */
+  width: 0;
+  height: 0;
+}
+
 .stj-keyword-item.editing .stj-inputs-container {
   display: flex;
 }
@@ -436,16 +444,18 @@
 .stj-inputs-container .stj-cell-action-row .stj-apply-row,
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row {
   margin: 0 !important;
-  padding: 5px 14px !important;
-  font-size: 13px !important;
+  padding: 2px 8px !important;    /* ★ 5px 14px → 2px 8px：ボタンサイズを縮小 */
+  font-size: 13px !important;     /* フォントサイズは維持 */
   font-weight: bold;
   white-space: nowrap;
   border-radius: 4px;
   cursor: pointer;
-  background-color: #e0e0e0;    /* ★ 共通：白地 */
-  color: #000000;                /* ★ 共通：黒文字 */
+  background-color: #e0e0e0;
+  color: #000000;
   border: 1px solid #aaa;
+  line-height: 1.4;
 }
+
 .stj-inputs-container .stj-cell-action-row .stj-apply-row:hover,
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row:hover {
   background-color: #c8c8c8;
