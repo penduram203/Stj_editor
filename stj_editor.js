@@ -1487,4 +1487,184 @@
 
         document.querySelectorAll('.stj-keyword-item').forEach(item => {
             const keywordInput = item.querySelector('.stj-keyword-input');
-            const imageInput = item.querySelector('.
+            const imageInput = item.querySelector('.stj-image-input');
+            if (!keywordInput || !imageInput) return;
+            const keyword = keywordInput.value.trim();
+            if (!keyword) return;
+            const paths = toPaths(imageInput.value);
+            if (paths.length === 0) return;
+            imageMap[keyword] = paths.length === 1 ? paths[0] : paths;
+        });
+
+        return imageMap;
+    }
+
+    function exportJSON() {
+        const nameEl = document.getElementById('stj_char_name_display');
+        const charName = nameEl ? nameEl.textContent : '';
+        if (!charName) {
+            alert('キャラクター名が設定されていません');
+            return;
+        }
+
+        const imageMap = buildImageMapFromForm(charName);
+        const exportData = {
+            image_display_extension: imageMap
+        };
+
+        try {
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${charName}_ext.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showCustomAlert('JSONファイルを出力しました');
+            console.log(`✅ ${charName}_ext.json を出力しました`, exportData);
+        } catch (e) {
+            console.error('[STJ Editor] JSON出力に失敗しました:', e);
+            alert('JSON出力に失敗しました。詳細はコンソールを確認してください。');
+        }
+    }
+
+    function showCustomAlert(message) {
+        const existingAlert = document.getElementById('stj_custom_alert');
+        if (existingAlert) existingAlert.remove();
+
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'stj_custom_alert';
+        alertDiv.textContent = message;
+        document.body.appendChild(alertDiv);
+        setTimeout(() => {
+            alertDiv.style.opacity = '1';
+            alertDiv.style.transform = 'translate(-50%, -50%) scale(1)';
+        }, 10);
+        setTimeout(() => {
+            alertDiv.style.opacity = '0';
+            alertDiv.style.transform = 'translate(-50%, -50%) scale(0.9)';
+            setTimeout(() => {
+                if (alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
+            }, 300);
+        }, 3000);
+    }
+
+    function saveData() {
+        const nameEl = document.getElementById('stj_char_name_display');
+        const charName = nameEl ? nameEl.textContent : '';
+        if (!charName) {
+            alert('キャラクター名が設定されていません');
+            return;
+        }
+        const data = {
+            charName: charName,
+            defaultImage: document.getElementById('stj_default_image').value,
+            thumbnailImage: document.getElementById('stj_thumbnail_image').value,
+            keywords: []
+        };
+        const keywordItems = document.querySelectorAll('.stj-keyword-item');
+        keywordItems.forEach(item => {
+            const keywordInput = item.querySelector('.stj-keyword-input');
+            const imageInput = item.querySelector('.stj-image-input');
+            if (keywordInput && imageInput) {
+                data.keywords.push({
+                    keyword: keywordInput.value,
+                    imageName: imageInput.value
+                });
+            }
+        });
+
+        const stjSettings = getExtensionSettings();
+        stjSettings[charName] = data;
+
+        persistSettings();
+        showCustomAlert('データを保存しました');
+    }
+
+    function loadSavedData(charName) {
+        if (!charName) return;
+        const stjSettings = getExtensionSettings();
+        const data = stjSettings[charName];
+        if (!data) return;
+        try {
+            const defEl = document.getElementById('stj_default_image');
+            if (defEl) defEl.value = data.defaultImage || '';
+            const thumbEl = document.getElementById('stj_thumbnail_image');
+            if (thumbEl) thumbEl.value = data.thumbnailImage || '';
+            const container = document.getElementById('stj_keywords_container');
+            if (!container) return;
+            container.innerHTML = '';
+            if (data.keywords && data.keywords.length > 0) {
+                data.keywords.forEach((kw, index) => {
+                    addKeywordRowWithData(container, index, kw);
+                });
+            }
+            setTimeout(updatePreview, 100);
+        } catch (e) {
+            console.error('保存データの読み込みに失敗しました', e);
+        }
+    }
+
+    function addKeywordRowWithData(container, index, data) {
+        const newItem = document.createElement('div');
+        newItem.className = 'stj-keyword-item';
+        newItem.innerHTML = `
+            <div class="stj-image-preview" id="stj_preview_${index}" style="position: relative;">
+                <div class="stj-preview-text">プレビュー</div>
+            </div>
+            <div class="stj-inputs-container">
+                ${buildCellActionRowHtml()}
+                <div class="stj-input-row">
+                    <button class="stj-delete-row">×</button>
+                    <div class="stj-input-group stj-keyword-width">
+                        <label for="stj_keywords_${index}">キーワード</label>
+                        <input type="text" id="stj_keywords_${index}" class="stj-keyword-input" value="${data.keyword || ''}">
+                    </div>
+                </div>
+                <div class="stj-input-row">
+                    <div class="stj-input-group stj-image-width">
+                        <label for="stj_image_name_${index}">ファイル名</label>
+                        <input type="text" id="stj_image_name_${index}" class="stj-image-input" value="${data.imageName || ''}" placeholder="複数ファイルはカンマ区切り">
+                        ${buildExtensionButtonsHtml()}
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(newItem);
+
+        attachKeywordRowListeners(newItem, index);
+    }
+
+    function initStjEditor() {
+        const context = getSTContext();
+        if (!context) {
+            setTimeout(initStjEditor, 500);
+            return;
+        }
+
+        const eventSource = context.eventSource;
+        const eventTypes = context.eventTypes;
+
+        createExportButton();
+
+        if (eventSource && eventTypes) {
+            if (eventTypes.CHAT_CHANGED) {
+                eventSource.on(eventTypes.CHAT_CHANGED, createExportButton);
+            }
+            if (eventTypes.CHARACTER_LOADED) {
+                eventSource.on(eventTypes.CHARACTER_LOADED, createExportButton);
+            }
+            if (eventTypes.APP_READY) {
+                eventSource.on(eventTypes.APP_READY, createExportButton);
+            }
+        } else {
+            console.warn('[STJ Editor] eventSource or eventTypes not found in context.');
+        }
+    }
+
+    $(document).ready(() => {
+        initStjEditor();
+    });
+})();
