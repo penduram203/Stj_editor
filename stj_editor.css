@@ -118,14 +118,18 @@
   -webkit-user-select: none;
 }
 
-/* ★ jpg / gif：横幅を狭く */
-.stj-ext-row .stj-ext-btn[data-ext=".jpg,"],
-.stj-ext-row .stj-ext-btn[data-ext=".gif,"] {
+/* ★ jpg：横幅を広く、webp：横幅を狭く */
+.stj-ext-row .stj-ext-btn[data-ext=".jpg,"] {
+  flex-grow: 1.5;
+}
+.stj-ext-row .stj-ext-btn[data-ext=".webp,"] {
   flex-grow: 0.7;
 }
 
-/* ★ webp / webm：横幅を広く */
-.stj-ext-row .stj-ext-btn[data-ext=".webp,"],
+/* gif / webm は前回の指定を維持 */
+.stj-ext-row .stj-ext-btn[data-ext=".gif,"] {
+  flex-grow: 0.7;
+}
 .stj-ext-row .stj-ext-btn[data-ext=".webm,"] {
   flex-grow: 1.5;
 }
