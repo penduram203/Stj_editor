@@ -43,7 +43,7 @@
 
 .stj-input-group {
   margin-bottom: 15px;
-  position: relative;   /* ★ 拡張子ボタンの絶対配置基準 */
+  position: relative;   /* 拡張子ボタンの絶対配置基準 */
 }
 .stj-input-group label {
   display: block;
@@ -73,14 +73,14 @@
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 3px;
+  margin-top: 0;                 /* 入力欄の真下に密着 */
   z-index: 40;
   flex-direction: column;
-  gap: 3px;
-  background-color: rgba(0, 0, 0, 0.75);
-  border: 1px solid #4a5568;
-  border-radius: 4px;
-  padding: 3px;
+  gap: 0;
+  background-color: transparent; /* 外枠の背景を除去 */
+  border: none;                  /* 外枠の border を除去 */
+  border-radius: 0;
+  padding: 0;                    /* 外枠の padding を除去 */
   box-sizing: border-box;
   pointer-events: auto;
 }
@@ -91,23 +91,28 @@
 
 .stj-ext-row {
   display: flex;
-  gap: 2px;
+  gap: 0;                        /* 横方向の余白ゼロ */
 }
 
 .stj-ext-row .stj-ext-btn {
+  box-sizing: border-box;
   flex: 0 0 auto;
-  min-width: 0;
-  padding: 3px 2px 6px 6px;         /* ★ 3px 6px → 3px 2px：左右の内部余白を縮小 */
-  font-size: 12px;          /* 文字サイズは維持 */
+  width: 28px;                   /* 正方形の一辺 */
+  height: 28px;                  /* 正方形の一辺 */
+  padding: 0;                    /* 内部余白ゼロ */
+  font-size: 12px;               /* フォントサイズ 12px */
   font-weight: bold;
   background-color: #4a5568;
   color: #ffffff;
   border: 1px solid #718096;
-  border-radius: 3px;
+  border-radius: 0;              /* 正方形なので角丸なし */
   cursor: pointer;
   white-space: nowrap;
   text-align: center;
-  line-height: 1.1;
+  line-height: 1;
+  display: flex;                 /* 文字を中央配置 */
+  align-items: center;
+  justify-content: center;
   user-select: none;
   -moz-user-select: none;
   -webkit-user-select: none;
@@ -453,7 +458,14 @@
   gap: 6px;
   justify-content: center;
   z-index: 10;
-  overflow: visible;                /* ★ hidden → visible：拡張子パネルのため */
+  overflow: visible;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.stj-inputs-container::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 .stj-keyword-item.editing .stj-inputs-container {
   display: flex;
@@ -479,7 +491,7 @@
   min-width: 0;
 }
 
-/* ===== セル上部アクション行（決定・キャンセル） ===== */
+/* ===== セル上部アクション行（決定・キャンセル）：❌ボタンの直右に密着配置 ===== */
 .stj-inputs-container .stj-cell-action-row {
   position: absolute;
   top: 2px;
@@ -492,6 +504,7 @@
   padding: 0;
 }
 
+/* 決定・キャンセルボタン：❌ボタンと同じ縦幅36pxで統一、白地＋黒文字 */
 .stj-inputs-container .stj-cell-action-row .stj-apply-row,
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row {
   margin: 0 !important;
@@ -512,6 +525,7 @@
   line-height: 1;
 }
 
+/* 一番右のキャンセルボタンのみ右端を丸める */
 .stj-inputs-container .stj-cell-action-row .stj-cancel-row {
   border-radius: 0 4px 4px 0;
 }
