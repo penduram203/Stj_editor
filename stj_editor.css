@@ -221,7 +221,7 @@
   line-height: 1.2;
 }
 
-/* キャラクター名（左詰め：マージン自動なし） */
+/* キャラクター名（左詰め） */
 #stj_char_name_display {
   font-size: 18px;
   font-weight: 900;
@@ -240,27 +240,41 @@
   white-space: nowrap;
 }
 
-/* ヘルプボタン */
+/* ヘルプボタン（太い赤枠で目立たせる） */
 #stj_test_section .stj-help-btn {
-  padding: 2px 12px;
+  padding: 3px 14px;
   font-size: 14px;
   font-weight: bold;
   background-color: #4a5568;
   color: #ffffff;
-  border: 1px solid #718096;
-  border-radius: 4px;
+  border: 4px solid #ff2d2d;       /* ★ 太い赤枠 */
+  border-radius: 6px;
   cursor: pointer;
   line-height: 1.2;
   white-space: nowrap;
   user-select: none;
   -moz-user-select: none;
   -webkit-user-select: none;
+  box-shadow:
+    0 0 8px rgba(255, 45, 45, 0.8),
+    0 0 16px rgba(255, 45, 45, 0.45),
+    inset 0 0 4px rgba(255, 45, 45, 0.4);
+  transition: all 0.15s ease;
 }
 #stj_test_section .stj-help-btn:hover {
   background-color: #718096;
+  border-color: #ff5555;
+  box-shadow:
+    0 0 12px rgba(255, 85, 85, 1),
+    0 0 24px rgba(255, 45, 45, 0.65),
+    inset 0 0 6px rgba(255, 45, 45, 0.5);
 }
 #stj_test_section .stj-help-btn:active {
   background-color: #2d3748;
+  border-color: #cc0000;
+  box-shadow:
+    0 0 6px rgba(204, 0, 0, 0.8),
+    inset 0 0 8px rgba(255, 45, 45, 0.5);
 }
 
 /* ===== 条件分岐の詳細ガイド（ヘルプで表示） ===== */
